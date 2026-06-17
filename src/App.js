@@ -1087,7 +1087,7 @@ function Evenements() {
   }
 
   function deleteEvt(e) {
-    if (!window.confirm("Supprimer "" + e.titre + "" ?")) return;
+    if (!window.confirm('Supprimer ' + e.titre + ' ?')) return;
     fetch(SUPABASE_URL + "/rest/v1/evenements?id=eq." + e.id, {
       method: "DELETE",
       headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
