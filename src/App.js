@@ -959,6 +959,7 @@ function Evenements() {
   var detailState = useState(null); var detailEvt = detailState[0]; var setDetailEvt = detailState[1];
   var editEvtState = useState(null); var editingEvt = editEvtState[0]; var setEditingEvt = editEvtState[1];
   var editEvtModal = useState(false); var editEvtModalOpen = editEvtModal[0]; var setEditEvtModal = editEvtModal[1];
+  var editEvtCoachesState = useState([]); var editEvtCoaches = editEvtCoachesState[0]; var setEditEvtCoaches = editEvtCoachesState[1];
   var dupModalState = useState(false); var dupModal = dupModalState[0]; var setDupModal = dupModalState[1];
   var dupSourceState = useState(null); var dupSource = dupSourceState[0]; var setDupSource = dupSourceState[1];
   var dupDatesState = useState([]); var dupDates = dupDatesState[0]; var setDupDates = dupDatesState[1];
@@ -1085,6 +1086,16 @@ function Evenements() {
     }).catch(function(e) { alert(e.message); });
   }
 
+  function deleteEvt(e) {
+    if (!window.confirm("Supprimer "" + e.titre + "" ?")) return;
+    fetch(SUPABASE_URL + "/rest/v1/evenements?id=eq." + e.id, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    }).then(function() {
+      setData(data.filter(function(x) { return x.id !== e.id; }));
+    }).catch(function(err) { alert("Erreur: " + err.message); });
+  }
+
   function getPartenairesForEvt(evtId) {
     var ids = evtPartenaires[evtId] || [];
     return partenaires.filter(function(p) { return ids.indexOf(p.id) !== -1; });
@@ -1145,8 +1156,15 @@ function Evenements() {
                     {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
                     <Badge s={e.statut} />
                   </div>
-                  <button onClick={function(ev) { ev.stopPropagation(); setEditingEvt(Object.assign({}, e)); setEditEvtModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#666", flexShrink: 0 }}>✏️</button>
-                  <button onClick={function(ev) { ev.stopPropagation(); duplicateEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7", flexShrink: 0 }} title="Dupliquer cet événement">📋 Dupliquer</button>
+                  <button onClick={function(ev) {
+  ev.stopPropagation();
+  setEditingEvt(Object.assign({}, e));
+  sbFetch("evenement_coaches", { select: "coach_id", filter: "evenement_id=eq." + e.id })
+    .then(function(rows) { setEditEvtCoaches(rows.map(function(r) { return r.coach_id; })); });
+  setEditEvtModal(true);
+}} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#666", flexShrink: 0 }}>✏️</button>
+                  <button onClick={function(ev) { ev.stopPropagation(); duplicateEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7", flexShrink: 0 }}>📋 Dupliquer</button>
+                  <button onClick={function(ev) { ev.stopPropagation(); deleteEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #E24B4A44", background: "#fff", cursor: "pointer", fontSize: 12, color: "#E24B4A", flexShrink: 0 }}>🗑️</button>
                   <span onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ color: "#ccc", cursor: "pointer" }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
                 {isOpen && (
