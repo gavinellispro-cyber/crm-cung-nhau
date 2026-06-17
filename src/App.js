@@ -177,6 +177,15 @@ function Dashboard() {
     }).catch(function() { setLoading(false); });
   }, []);
 
+  var aattState = useState(0); var actionsEnAttente = aattState[0]; var setActionsEnAttente = aattState[1];
+  useEffect(function() {
+    var tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    sbFetch("actions_partenaires", {
+      select: "id",
+      filter: "statut=eq.En+attente&date_prevue=lte." + tomorrow,
+    }).then(function(rows) { setActionsEnAttente(rows.length); }).catch(function() {});
+  }, []);
+
   if (loading || !data) return <Spinner />;
 
   var now = new Date();
@@ -218,7 +227,7 @@ function Dashboard() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
         <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
-        <KpiCard label="⏳ Actions en attente" value={notifications.length} color={notifications.length > 0 ? "#BA7517" : "#888"} sub="à relancer" />
+        <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
       </div>
     </div>
   );
