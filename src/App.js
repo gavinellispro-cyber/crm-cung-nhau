@@ -229,6 +229,8 @@ function Partenaires() {
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var fs2 = useState("Tous"); var filtre = fs2[0]; var setFiltre = fs2[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
+  var ems = useState(false); var editModal = ems[0]; var setEditModal = ems[1];
+  var efs = useState(null); var editForm = efs[0]; var setEditForm = efs[1];
   var EMPTY_FORM = { nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", adresse: "", district: "", nombre_enfants: "", montant_annuel: "", statut: "Actif", notes: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
 
@@ -251,6 +253,20 @@ function Partenaires() {
       setForm(EMPTY_FORM);
     }).catch(function(e) { alert("Erreur: " + e.message); });
   }
+
+  function handleUpdate() {
+    var payload = Object.assign({}, editForm);
+    delete payload.id; delete payload.created_at; delete payload.updated_at;
+    if (payload.nombre_enfants === "") delete payload.nombre_enfants;
+    if (payload.montant_annuel === "") payload.montant_annuel = 0;
+    sbUpdate("partenaires", editForm.id, payload).then(function() {
+      setData(data.map(function(p) { return p.id === editForm.id ? Object.assign({}, p, payload) : p; }));
+      setEditModal(false);
+      setEditForm(null);
+    }).catch(function(e) { alert("Erreur: " + e.message); });
+  }
+
+  function setEdit(k, v) { setEditForm(Object.assign({}, editForm, { [k]: v })); }
 
   if (loading) return <Spinner />;
 
@@ -275,22 +291,62 @@ function Partenaires() {
       </div>
 
       {filtered.length === 0 ? <Empty msg={"Aucun " + (filtre === "Tous" ? "partenaire" : filtre) + " — cliquez + Ajouter"} /> : (
-        <TableUI headers={["Nom", "Type", "Contact", "Email / Tél", "District", "Montant", "Statut"]}>
+        <TableUI headers={["ORGANISATION", "TYPE", "LOCATION", "STATUS", "RESPONSIBLE", "EMAIL", "PHONE", ""]}>
           {filtered.map(function(p) {
             return (
               <tr key={p.id} style={{ borderBottom: "1px solid #f0ede6" }}>
                 <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500, color: "#2c2c2a" }}>{p.nom}</td>
                 <td style={{ padding: "10px 12px" }}><TypeBadge t={p.type} /></td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_nom || "—"}</td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_email || p.contact_tel || "—"}</td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.district || "—"}</td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{p.montant_annuel > 0 ? vnd(p.montant_annuel) : "—"}</td>
+                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.ville || p.district || "—"}</td>
                 <td style={{ padding: "10px 12px" }}><Badge s={p.statut} /></td>
+                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_nom || "—"}</td>
+                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_email || "—"}</td>
+                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_tel || "—"}</td>
+                <td style={{ padding: "10px 12px" }}>
+                  <button onClick={function(e) { e.stopPropagation(); setEditForm(p); setEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7" }}>✏️ Modifier</button>
+                </td>
               </tr>
             );
           })}
         </TableUI>
       )}
+
+
+      {editForm && <Modal open={editModal} onClose={function() { setEditModal(false); }} title={"Modifier — " + (editForm.nom || "")}>
+        <Field label="Type *">
+          <div style={{ display: "flex", gap: 8 }}>
+            {["ONG","Shelter","Ecole","Sponsor"].map(function(t) {
+              var active = editForm.type === t;
+              return <button key={t} onClick={function() { setEdit("type", t); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e8e6de"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? TYPE_COLOR[t] : "#666" }}>{TYPE_ICON[t]}<br />{t}</button>;
+            })}
+          </div>
+        </Field>
+        <Field label="Nom *"><input style={inp} value={editForm.nom || ""} onChange={function(e) { setEdit("nom", e.target.value); }} /></Field>
+        <Field label="Contact — Nom"><input style={inp} value={editForm.contact_nom || ""} onChange={function(e) { setEdit("contact_nom", e.target.value); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Email"><input style={inp} type="email" value={editForm.contact_email || ""} onChange={function(e) { setEdit("contact_email", e.target.value); }} /></Field>
+          <Field label="Téléphone"><input style={inp} value={editForm.contact_tel || ""} onChange={function(e) { setEdit("contact_tel", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Ville / Location"><input style={inp} value={editForm.ville || ""} onChange={function(e) { setEdit("ville", e.target.value); }} /></Field>
+          <Field label="District"><input style={inp} value={editForm.district || ""} onChange={function(e) { setEdit("district", e.target.value); }} /></Field>
+        </div>
+        <Field label="Adresse"><input style={inp} value={editForm.adresse || ""} onChange={function(e) { setEdit("adresse", e.target.value); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {editForm.type !== "Sponsor" && <Field label="Nb enfants"><input type="number" style={inp} value={editForm.nombre_enfants || ""} onChange={function(e) { setEdit("nombre_enfants", e.target.value); }} /></Field>}
+          {editForm.type === "Sponsor" && <Field label="Montant annuel (VND)"><input type="number" style={inp} value={editForm.montant_annuel || ""} onChange={function(e) { setEdit("montant_annuel", e.target.value); }} /></Field>}
+          <Field label="Statut">
+            <select style={sel} value={editForm.statut || "Actif"} onChange={function(e) { setEdit("statut", e.target.value); }}>
+              {["Actif","Prospect","A relancer","En pause","Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={editForm.notes || ""} onChange={function(e) { setEdit("notes", e.target.value); }} /></Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setEditModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleUpdate} style={btnP}>Enregistrer</button>
+        </div>
+      </Modal>}
 
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau partenaire">
         <Field label="Type *">
@@ -339,6 +395,8 @@ function Evenements() {
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var fs2 = useState("Tous"); var filtre = fs2[0]; var setFiltre = fs2[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
+  var ems = useState(false); var editModal = ems[0]; var setEditModal = ems[1];
+  var efs = useState(null); var editForm = efs[0]; var setEditForm = efs[1];
   var detailState = useState(null); var detailEvt = detailState[0]; var setDetailEvt = detailState[1];
 
   var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "" };
