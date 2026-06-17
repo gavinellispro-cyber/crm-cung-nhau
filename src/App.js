@@ -244,13 +244,32 @@ function FichePartenaire(props) {
   var formState = useState(EMPTY_ACTION); var form = formState[0]; var setForm = formState[1];
   var commentState = useState({}); var comments = commentState[0]; var setComments = commentState[1];
   var editCommentState = useState(null); var editingComment = editCommentState[0]; var setEditingComment = editCommentState[1];
+  var editActionState = useState(null); var editingAction = editActionState[0]; var setEditingAction = editActionState[1];
+  var editActionModal = useState(false); var editModal = editActionModal[0]; var setEditModal = editActionModal[1];
+
+  var evtsState = useState([]); var evts = evtsState[0]; var setEvts = evtsState[1];
 
   useEffect(function() {
-    sbFetch("actions_partenaires", {
-      select: "*",
-      filter: "partenaire_id=eq." + p.id,
-      order: "date_prevue.asc"
-    }).then(function(rows) { setActions(rows); setLoading(false); });
+    Promise.all([
+      sbFetch("actions_partenaires", {
+        select: "*",
+        filter: "partenaire_id=eq." + p.id,
+        order: "date_prevue.asc"
+      }),
+      sbFetch("evenement_partenaires", {
+        select: "evenement_id",
+        filter: "partenaire_id=eq." + p.id,
+      }),
+    ]).then(function(r) {
+      setActions(r[0]);
+      var evtIds = r[1].map(function(e) { return e.evenement_id; });
+      if (evtIds.length === 0) { setEvts([]); setLoading(false); return; }
+      sbFetch("evenements", {
+        select: "*",
+        filter: "id=in.(" + evtIds.join(",") + ")",
+        order: "date_debut.desc"
+      }).then(function(rows) { setEvts(rows); setLoading(false); });
+    });
   }, [p.id]);
 
   function setF(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
@@ -270,6 +289,16 @@ function FichePartenaire(props) {
       setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, { commentaire: txt }) : x; }));
       setEditingComment(null);
     });
+  }
+
+  function handleUpdateAction() {
+    var a = editingAction;
+    var payload = { titre: a.titre, type: a.type, date_prevue: a.date_prevue, heure: a.heure, commentaire: a.commentaire };
+    sbUpdate("actions_partenaires", a.id, payload).then(function() {
+      setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, payload) : x; }));
+      setEditModal(false);
+      setEditingAction(null);
+    }).catch(function(e) { alert(e.message); });
   }
 
   var today = new Date().toISOString().split("T")[0];
@@ -319,6 +348,7 @@ function FichePartenaire(props) {
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
               <button onClick={function() { changeStatut(a, "Confirme"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "Confirme" ? "#1D9E75" : "#ddd"), background: a.statut === "Confirme" ? "#1D9E7522" : "#fff", color: a.statut === "Confirme" ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "Confirme" ? 600 : 400 }}>✅ Confirmé</button>
               <button onClick={function() { changeStatut(a, "En attente"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "En attente" ? "#BA7517" : "#ddd"), background: a.statut === "En attente" ? "#BA751722" : "#fff", color: a.statut === "En attente" ? "#BA7517" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "En attente" ? 600 : 400 }}>⏳ En attente</button>
+              <button onClick={function() { setEditingAction(Object.assign({}, a)); setEditModal(true); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #ddd", background: "#fff", color: "#534AB7", cursor: "pointer", fontSize: 12 }}>✏️ Modifier</button>
               <button onClick={function() { deleteAction(a); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #E24B4A44", background: "#fff", color: "#E24B4A", cursor: "pointer", fontSize: 12, marginLeft: "auto" }}>🗑️ Supprimer</button>
             </div>
             {/* Commentaire */}
@@ -394,6 +424,80 @@ function FichePartenaire(props) {
             </div>
           )}
         </div>
+
+        {/* Événements associés */}
+        {evts.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📅 Événements associés ({evts.length})</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {evts.map(function(e) {
+                var STATUT_EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+                var color = STATUT_EVT_COLOR[e.statut] || "#888";
+                return (
+                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 4, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+                        {e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}
+                        {e.lieu ? " · " + e.lieu : ""}
+                        {e.nombre_enfants_presents > 0 ? " · " + e.nombre_enfants_presents + " enfants" : ""}
+                      </div>
+                      {e.confirmation_statut && <span style={{ fontSize: 11, background: e.confirmation_statut === "Confirme" ? "#1D9E7522" : "#BA751722", color: e.confirmation_statut === "Confirme" ? "#1D9E75" : "#BA7517", borderRadius: 12, padding: "2px 6px", fontWeight: 600, marginTop: 4, display: "inline-block" }}>{e.confirmation_statut === "Confirme" ? "✅ Confirmé" : "⏳ En attente"}</span>}
+                    </div>
+                    <span style={{ background: color + "22", color: color, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{e.statut}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Événements associés */}
+        {evts.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📅 Événements associés ({evts.length})</h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {evts.map(function(e) {
+                var EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+                var color = EVT_COLOR[e.statut] || "#888";
+                return (
+                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 4, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
+                        {e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}
+                        {e.lieu ? " · " + e.lieu : ""}
+                        {e.nombre_enfants_presents > 0 ? " · " + e.nombre_enfants_presents + " enfants" : ""}
+                      </div>
+                    </div>
+                    <span style={{ background: color + "22", color: color, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{e.statut}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Modal edition action */}
+        {editingAction && <Modal open={editModal} onClose={function() { setEditModal(false); }} title="Modifier l'action">
+          <Field label="Titre *"><input style={inp} value={editingAction.titre || ""} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { titre: e.target.value })); }} /></Field>
+          <Field label="Type">
+            <select style={sel} value={editingAction.type || "Visite terrain"} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { type: e.target.value })); }}>
+              {["Visite terrain","RDV","Appel","Email","Autre"].map(function(t) { return <option key={t}>{t}</option>; })}
+            </select>
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Date *"><input type="date" style={inp} value={editingAction.date_prevue || ""} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { date_prevue: e.target.value })); }} /></Field>
+            <Field label="Heure"><input type="time" style={inp} value={editingAction.heure || ""} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { heure: e.target.value })); }} /></Field>
+          </div>
+          <Field label="Commentaire"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 80 })} value={editingAction.commentaire || ""} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { commentaire: e.target.value })); }} /></Field>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+            <button onClick={function() { setEditModal(false); }} style={btnS}>Annuler</button>
+            <button onClick={handleUpdateAction} style={btnP}>Enregistrer</button>
+          </div>
+        </Modal>}
 
         {/* Modal ajout action */}
         <Modal open={modal} onClose={function() { setModal(false); }} title="Planifier une action">
@@ -625,8 +729,10 @@ function Evenements() {
   var monthState = useState(new Date()); var currentMonth = monthState[0]; var setCurrentMonth = monthState[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
   var detailState = useState(null); var detailEvt = detailState[0]; var setDetailEvt = detailState[1];
+  var editEvtState = useState(null); var editingEvt = editEvtState[0]; var setEditingEvt = editEvtState[1];
+  var editEvtModal = useState(false); var editEvtModalOpen = editEvtModal[0]; var setEditEvtModal = editEvtModal[1];
 
-  var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "" };
+  var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "", confirmation_statut: "En attente", responsable_coach_id: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
   var selONG = useState([]); var selectedONG = selONG[0]; var setSelectedONG = selONG[1];
   var selShelter = useState([]); var selectedShelter = selShelter[0]; var setSelectedShelter = selShelter[1];
@@ -660,6 +766,34 @@ function Evenements() {
     setForm(Object.assign({}, EMPTY_FORM, { date_debut: dateStr || "" }));
     setSelectedONG([]); setSelectedShelter([]); setSelectedEcole([]); setSelectedSponsor([]);
     setSelectedCoaches([]);
+  }
+
+  function duplicateEvt(e) {
+    // Pre-fill form with existing event data, clear date
+    var partIds = evtPartenaires[e.id] || [];
+    setForm({
+      titre: e.titre,
+      type: e.type,
+      date_debut: "",
+      lieu: e.lieu || "",
+      nombre_enfants_presents: e.nombre_enfants_presents || "",
+      statut: "Planifie",
+      notes: e.notes || "",
+    });
+    // Restore partner selections
+    var ongs = partenaires.filter(function(p) { return p.type === "ONG" && partIds.indexOf(p.id) !== -1; }).map(function(p) { return p.id; });
+    var shelters = partenaires.filter(function(p) { return p.type === "Shelter" && partIds.indexOf(p.id) !== -1; }).map(function(p) { return p.id; });
+    var ecoles = partenaires.filter(function(p) { return p.type === "Ecole" && partIds.indexOf(p.id) !== -1; }).map(function(p) { return p.id; });
+    var sponsors = partenaires.filter(function(p) { return p.type === "Sponsor" && partIds.indexOf(p.id) !== -1; }).map(function(p) { return p.id; });
+    setSelectedONG(ongs);
+    setSelectedShelter(shelters);
+    setSelectedEcole(ecoles);
+    setSelectedSponsor(sponsors);
+    // Restore coaches - fetch from evenement_coaches
+    sbFetch("evenement_coaches", { select: "coach_id", filter: "evenement_id=eq." + e.id }).then(function(rows) {
+      setSelectedCoaches(rows.map(function(r) { return r.coach_id; }));
+    });
+    setModal(true);
   }
 
   function openModalForDate(dateStr) {
@@ -699,6 +833,23 @@ function Evenements() {
         resetForm();
       });
     }).catch(function(e) { alert("Erreur: " + e.message); });
+  }
+
+  function handleUpdateEvt() {
+    var payload = {
+      titre: editingEvt.titre,
+      type: editingEvt.type,
+      date_debut: editingEvt.date_debut,
+      lieu: editingEvt.lieu,
+      nombre_enfants_presents: editingEvt.nombre_enfants_presents || null,
+      statut: editingEvt.statut,
+      notes: editingEvt.notes,
+    };
+    sbUpdate("evenements", editingEvt.id, payload).then(function() {
+      setData(data.map(function(e) { return e.id === editingEvt.id ? Object.assign({}, e, payload) : e; }));
+      setEditEvtModal(false);
+      setEditingEvt(null);
+    }).catch(function(e) { alert(e.message); });
   }
 
   function getPartenairesForEvt(evtId) {
@@ -750,15 +901,20 @@ function Evenements() {
             var color = STATUT_EVT_COLOR[e.statut] || "#888";
             return (
               <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, overflow: "hidden" }}>
-                <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", padding: "14px 16px", cursor: "pointer", gap: 12 }}>
-                  <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
-                    <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
+                <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12 }}>
+                  <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                    <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
+                    {e.confirmation_statut && <span style={{ fontSize: 11, background: e.confirmation_statut === "Confirme" ? "#1D9E7522" : "#BA751722", color: e.confirmation_statut === "Confirme" ? "#1D9E75" : "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{e.confirmation_statut === "Confirme" ? "✅ Confirmé" : "⏳ En attente"}</span>}
+                    </div>
+                    {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
+                    <Badge s={e.statut} />
                   </div>
-                  {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
-                  <Badge s={e.statut} />
-                  <span style={{ color: "#ccc" }}>{isOpen ? "▲" : "▼"}</span>
+                  <button onClick={function(ev) { ev.stopPropagation(); setEditingEvt(Object.assign({}, e)); setEditEvtModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#666", flexShrink: 0 }}>✏️</button>
+                  <button onClick={function(ev) { ev.stopPropagation(); duplicateEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7", flexShrink: 0 }} title="Dupliquer cet événement">📋 Dupliquer</button>
+                  <span onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ color: "#ccc", cursor: "pointer" }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
                 {isOpen && (
                   <div style={{ borderTop: "1px solid #f0ede6", padding: "12px 16px", background: "#fafaf8" }}>
@@ -785,7 +941,11 @@ function Evenements() {
                         </div>}
                       </div>
                     )}
-                    {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 10 }}>{e.notes}</div>}
+                    {e.responsable_coach_id && (function() {
+                      var resp = coaches.find(function(c) { return c.id === e.responsable_coach_id; });
+                      return resp ? <div style={{ fontSize: 13, color: "#534AB7", marginTop: 8, fontWeight: 500 }}>👤 Responsable : {resp.prenom} {resp.nom}</div> : null;
+                    })()}
+                    {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 6 }}>{e.notes}</div>}
                   </div>
                 )}
               </div>
@@ -837,6 +997,47 @@ function Evenements() {
         );
       })()}
 
+      {/* EDIT EVENT MODAL */}
+      {editingEvt && <Modal open={editEvtModalOpen} onClose={function() { setEditEvtModal(false); }} title={"Modifier — " + (editingEvt.titre || "")}>
+        <Field label="Titre *"><input style={inp} value={editingEvt.titre || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { titre: e.target.value })); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Type">
+            <select style={sel} value={editingEvt.type || "Entrainement"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { type: e.target.value })); }}>
+              {["Entrainement","Tournoi","Formation","Match","Evenement special"].map(function(t) { return <option key={t}>{t}</option>; })}
+            </select>
+          </Field>
+          <Field label="Statut">
+            <select style={sel} value={editingEvt.statut || "Planifie"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { statut: e.target.value })); }}>
+              {["Planifie","En cours","Termine","Annule"].map(function(t) { return <option key={t}>{t}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <Field label="Date et heure *"><input type="datetime-local" style={inp} value={editingEvt.date_debut ? editingEvt.date_debut.slice(0,16) : ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { date_debut: e.target.value })); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Lieu"><input style={inp} value={editingEvt.lieu || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { lieu: e.target.value })); }} /></Field>
+          <Field label="Nb enfants"><input type="number" style={inp} value={editingEvt.nombre_enfants_presents || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { nombre_enfants_presents: e.target.value })); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Confirmation">
+            <select style={sel} value={editingEvt.confirmation_statut || "En attente"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { confirmation_statut: e.target.value })); }}>
+              <option value="En attente">⏳ En attente</option>
+              <option value="Confirme">✅ Confirmé</option>
+            </select>
+          </Field>
+          <Field label="Responsable">
+            <select style={sel} value={editingEvt.responsable_coach_id || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { responsable_coach_id: e.target.value })); }}>
+              <option value="">— Aucun —</option>
+              {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={editingEvt.notes || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { notes: e.target.value })); }} /></Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setEditEvtModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleUpdateEvt} style={btnP}>Enregistrer</button>
+        </div>
+      </Modal>}
+
       {/* ADD MODAL */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouvel événement">
         <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} placeholder="Ex: Rugby à 7 — District 9" /></Field>
@@ -856,6 +1057,20 @@ function Evenements() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Lieu"><input style={inp} value={form.lieu} onChange={function(e) { set("lieu", e.target.value); }} /></Field>
           <Field label="Nb enfants"><input type="number" style={inp} value={form.nombre_enfants_presents} onChange={function(e) { set("nombre_enfants_presents", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Confirmation">
+            <select style={sel} value={form.confirmation_statut} onChange={function(e) { set("confirmation_statut", e.target.value); }}>
+              <option value="En attente">⏳ En attente</option>
+              <option value="Confirme">✅ Confirmé</option>
+            </select>
+          </Field>
+          <Field label="Responsable">
+            <select style={sel} value={form.responsable_coach_id} onChange={function(e) { set("responsable_coach_id", e.target.value); }}>
+              <option value="">— Aucun —</option>
+              {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
+            </select>
+          </Field>
         </div>
         <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
         <div style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 12 }}>Partenaires liés</div>
