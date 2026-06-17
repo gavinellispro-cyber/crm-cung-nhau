@@ -731,6 +731,11 @@ function Evenements() {
   var detailState = useState(null); var detailEvt = detailState[0]; var setDetailEvt = detailState[1];
   var editEvtState = useState(null); var editingEvt = editEvtState[0]; var setEditingEvt = editEvtState[1];
   var editEvtModal = useState(false); var editEvtModalOpen = editEvtModal[0]; var setEditEvtModal = editEvtModal[1];
+  var dupModalState = useState(false); var dupModal = dupModalState[0]; var setDupModal = dupModalState[1];
+  var dupSourceState = useState(null); var dupSource = dupSourceState[0]; var setDupSource = dupSourceState[1];
+  var dupDatesState = useState([]); var dupDates = dupDatesState[0]; var setDupDates = dupDatesState[1];
+  var dupMonthState = useState(function() { return new Date(); }); var dupMonth = dupMonthState[0]; var setDupMonth = dupMonthState[1];
+  var dupLoadingState = useState(false); var dupLoading = dupLoadingState[0]; var setDupLoading = dupLoadingState[1];
 
   var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "", confirmation_statut: "En attente", responsable_coach_id: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
@@ -1038,7 +1043,108 @@ function Evenements() {
         </div>
       </Modal>}
 
-      {/* ADD MODAL */}
+      {/* DUPLICATION MODAL */}
+      {dupSource && <Modal open={dupModal} onClose={function() { setDupModal(false); }} title={"📋 Dupliquer — " + (dupSource.titre || "")}>
+        <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
+          Cliquez sur autant de dates que vous voulez — naviguez librement entre les mois.
+        </div>
+
+        {/* Mini calendar */}
+        {(function() {
+          var MONTHS_FR2 = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+          var DAYS_FR2 = ["L","M","M","J","V","S","D"];
+          var year = dupMonth.getFullYear();
+          var month = dupMonth.getMonth();
+          var firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+          var daysInMonth = new Date(year, month + 1, 0).getDate();
+          var blanks = Array(firstDay).fill(null);
+          var days = Array.from({length: daysInMonth}, function(_, i) { return i + 1; });
+          var today = new Date().toISOString().split("T")[0];
+
+          return (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <button onClick={function(e) { e.preventDefault(); e.stopPropagation(); var d = new Date(year, month - 1, 1); setDupMonth(d); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>‹</button>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>{MONTHS_FR2[month]} {year}</span>
+                <button onClick={function(e) { e.preventDefault(); e.stopPropagation(); var d = new Date(year, month + 1, 1); setDupMonth(d); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>›</button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
+                {DAYS_FR2.map(function(d, i) { return <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#bbb", padding: "4px 0" }}>{d}</div>; })}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                {blanks.map(function(_, i) { return <div key={"b"+i} />; })}
+                {days.map(function(day) {
+                  var dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+                  var isSelected = dupDates.indexOf(dateStr) !== -1;
+                  var isPast = dateStr < today;
+                  return (
+                    <div key={day}
+                      onClick={function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isPast) return;
+                        if (isSelected) {
+                          setDupDates(function(prev) { return prev.filter(function(d) { return d !== dateStr; }); });
+                        } else {
+                          setDupDates(function(prev) { return prev.concat([dateStr]); });
+                        }
+                      }}
+                      style={{
+                        textAlign: "center", padding: "8px 2px", fontSize: 13, cursor: isPast ? "default" : "pointer",
+                        color: isPast ? "#ddd" : isSelected ? "#fff" : "#2c2c2a",
+                        background: isSelected ? "#534AB7" : "transparent",
+                        borderRadius: 8, fontWeight: isSelected ? 700 : 400,
+                        border: isSelected ? "none" : "1px solid transparent",
+                        userSelect: "none",
+                      }}
+                      onMouseEnter={function(e) { if (!isPast && !isSelected) e.currentTarget.style.background = "#f0ede6"; }}
+                      onMouseLeave={function(e) { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Selected dates */}
+        <div style={{ marginTop: 16, minHeight: 40 }}>
+          {dupDates.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#bbb", fontStyle: "italic" }}>Aucune date sélectionnée</div>
+          ) : (
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>
+                {dupDates.length} date{dupDates.length > 1 ? "s" : ""} sélectionnée{dupDates.length > 1 ? "s" : ""}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {dupDates.slice().sort().map(function(d) {
+                  return (
+                    <span key={d}
+                      onClick={function() { setDupDates(function(prev) { return prev.filter(function(x) { return x !== d; }); }); }}
+                      style={{ background: "#534AB7", color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                      {d} <span style={{ opacity: 0.6, fontWeight: 700 }}>×</span>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, borderTop: "1px solid #f0ede6", paddingTop: 16 }}>
+          <button onClick={function() { setDupModal(false); setDupDates([]); }} style={btnS}>Annuler</button>
+          <button
+            onClick={handleConfirmDuplication}
+            disabled={dupDates.length === 0 || dupLoading}
+            style={Object.assign({}, btnP, { opacity: dupDates.length > 0 && !dupLoading ? 1 : 0.5 })}>
+            {dupLoading ? "Création..." : "✅ Créer " + dupDates.length + " événement" + (dupDates.length > 1 ? "s" : "")}
+          </button>
+        </div>
+      </Modal>}
+
+            {/* ADD MODAL */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouvel événement">
         <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} placeholder="Ex: Rugby à 7 — District 9" /></Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1100,95 +1206,188 @@ function Coaches() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
-  var ces = useState(false); var coachEditModal = ces[0]; var setCoachEditModal = ces[1];
-  var cef = useState(null); var coachEdit = cef[0]; var setCoachEdit = cef[1];
-  var EMPTY = { prenom: "", nom: "", email: "", telephone: "", sport_principal: "Rugby", role: "Benevole", statut: "Actif" };
+  var ficheState = useState(null); var ficheCoach = ficheState[0]; var setFicheCoach = ficheState[1];
+  var uploadingState = useState(null); var uploadingId = uploadingState[0]; var setUploadingId = uploadingState[1];
+
+  var EMPTY = { prenom: "", nom: "", email: "", telephone: "", sport_principal: "Rugby", role: "Benevole", statut: "Actif", pays: "", langues: "", background_check: "", sessions_programmees: 0, sessions_completees: 0 };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
-  useEffect(function() { sbFetch("coaches", { select: "*", order: "nom.asc" }).then(function(r) { setData(r); setLoading(false); }); }, []);
+
+  useEffect(function() {
+    sbFetch("coaches", { select: "*", order: "sessions_completees.desc" }).then(function(r) { setData(r); setLoading(false); });
+  }, []);
+
   function handleAdd() {
-    sbInsert("coaches", form).then(function(rows) { setData(data.concat(rows[0])); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
+    sbInsert("coaches", form).then(function(rows) { setData([rows[0]].concat(data)); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
   }
 
-  function handleCoachUpdate() {
-    var payload = Object.assign({}, coachEdit);
-    delete payload.id; delete payload.created_at; delete payload.updated_at;
-    sbUpdate("coaches", coachEdit.id, payload).then(function() {
-      setData(data.map(function(c) { return c.id === coachEdit.id ? Object.assign({}, c, payload) : c; }));
-      setCoachEditModal(false); setCoachEdit(null);
-    }).catch(function(e) { alert(e.message); });
+  function handlePhotoUpload(coachId, file) {
+    if (!file) return;
+    setUploadingId(coachId);
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var base64 = ev.target.result;
+      // Store as data URL in photo_url field
+      sbUpdate("coaches", coachId, { photo_url: base64 }).then(function() {
+        setData(data.map(function(c) { return c.id === coachId ? Object.assign({}, c, { photo_url: base64 }) : c; }));
+        if (ficheCoach && ficheCoach.id === coachId) setFicheCoach(Object.assign({}, ficheCoach, { photo_url: base64 }));
+        setUploadingId(null);
+      });
+    };
+    reader.readAsDataURL(file);
   }
-  function setCE(k, v) { setCoachEdit(Object.assign({}, coachEdit, { [k]: v })); }
+
+  // Sort by sessions_completees desc
+  var sorted = data.slice().sort(function(a, b) { return (Number(b.sessions_completees) || 0) - (Number(a.sessions_completees) || 0); });
+
   if (loading) return <Spinner />;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end" }}><button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button></div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 13, color: "#888" }}>{data.length} coach{data.length > 1 ? "es" : ""} · classés par sessions</div>
+        <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
+      </div>
+
       {data.length === 0 ? <Empty msg="Aucun coach" /> : (
-        <TableUI headers={["Nom", "Pays", "Langues", "Rôle", "Background", "Sessions", "Statut", ""]}>
-          {data.map(function(c) { return (
-            <tr key={c.id} style={{ borderBottom: "1px solid #f0ede6" }}>
-              <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500 }}>{c.prenom} {c.nom}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.pays || "—"}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.langues || "—"}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.role}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.background_check || "—"}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666", textAlign: "center" }}>{(c.sessions_completees || 0) + "/" + (c.sessions_programmees || 0)}</td>
-              <td style={{ padding: "10px 12px" }}><Badge s={c.statut} /></td>
-              <td style={{ padding: "10px 12px" }}><button onClick={function() { setCoachEdit(c); setCoachEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7" }}>✏️ Modifier</button></td>
-            </tr>
-          ); })}
-        </TableUI>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+          {sorted.map(function(c, idx) {
+            var sessionsTotal = Number(c.sessions_completees) || 0;
+            var sessionsProg = Number(c.sessions_programmees) || 0;
+            var pct = sessionsProg > 0 ? Math.round((sessionsTotal / sessionsProg) * 100) : 0;
+            var STATUT_C = { Actif: "#1D9E75", Inactif: "#888", Occasionnel: "#BA7517" };
+            var color = STATUT_C[c.statut] || "#888";
+            var medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
+            return (
+              <div key={c.id} onClick={function() { setFicheCoach(c); }} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+                onMouseEnter={function(e) { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+                onMouseLeave={function(e) { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
+                {/* Photo area */}
+                <div style={{ position: "relative", height: 140, background: "linear-gradient(135deg, #534AB711, #185FA511)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {c.photo_url ? (
+                    <img src={c.photo_url} alt={c.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#534AB722", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#534AB7" }}>
+                      {(c.prenom || "?")[0]}{(c.nom || "")[0]}
+                    </div>
+                  )}
+                  {medal && <span style={{ position: "absolute", top: 8, left: 8, fontSize: 22 }}>{medal}</span>}
+                  <div style={{ position: "absolute", top: 8, right: 8 }}>
+                    <span style={{ background: color + "22", color: color, padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{c.statut}</span>
+                  </div>
+                  {/* Upload photo button */}
+                  <label onClick={function(e) { e.stopPropagation(); }} style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.5)", color: "#fff", borderRadius: 20, padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>
+                    {uploadingId === c.id ? "..." : "📷"}
+                    <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(c.id, e.target.files[0]); }} />
+                  </label>
+                  <div style={{ position: "absolute", bottom: 8, left: 8, background: "rgba(0,0,0,0.5)", color: "#fff", borderRadius: 12, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
+                    #{idx + 1}
+                  </div>
+                </div>
+                {/* Info */}
+                <div style={{ padding: "12px 14px" }}>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#2c2c2a" }}>{c.prenom} {c.nom}</div>
+                  <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.role} · {c.pays || "—"}</div>
+                  {c.langues && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{c.langues}</div>}
+                  {/* Sessions bar */}
+                  <div style={{ marginTop: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}>
+                      <span>Sessions</span>
+                      <span style={{ fontWeight: 600, color: "#534AB7" }}>{sessionsTotal}/{sessionsProg}</span>
+                    </div>
+                    <div style={{ background: "#f0ede6", borderRadius: 4, height: 6 }}>
+                      <div style={{ background: "#534AB7", borderRadius: 4, height: 6, width: Math.min(pct, 100) + "%" }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 3, textAlign: "right" }}>{pct}% complété</div>
+                  </div>
+                  {c.background_check && <div style={{ fontSize: 11, color: c.background_check === "CONFIRMED" ? "#1D9E75" : "#BA7517", marginTop: 6, fontWeight: 500 }}>✓ {c.background_check}</div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
-      {coachEdit && <Modal open={coachEditModal} onClose={function() { setCoachEditModal(false); }} title={"Modifier — " + (coachEdit.prenom || "") + " " + (coachEdit.nom || "")}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Prénom"><input style={inp} value={coachEdit.prenom || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {prenom: e.target.value})); }} /></Field>
-          <Field label="Nom"><input style={inp} value={coachEdit.nom || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {nom: e.target.value})); }} /></Field>
+      {/* FICHE COACH */}
+      {ficheCoach && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ background: "#fff", width: "100%", maxWidth: 460, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}>
+            {/* Photo header */}
+            <div style={{ position: "relative", height: 200, background: "linear-gradient(135deg, #534AB722, #185FA522)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {ficheCoach.photo_url ? (
+                <img src={ficheCoach.photo_url} alt={ficheCoach.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: 90, height: 90, borderRadius: "50%", background: "#534AB733", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, color: "#534AB7" }}>
+                  {(ficheCoach.prenom || "?")[0]}{(ficheCoach.nom || "")[0]}
+                </div>
+              )}
+              <button onClick={function() { setFicheCoach(null); }} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: "50%", width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <label style={{ position: "absolute", bottom: 12, right: 12, background: "#534AB7", color: "#fff", borderRadius: 20, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
+                📷 Changer la photo
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(ficheCoach.id, e.target.files[0]); }} />
+              </label>
+            </div>
+            {/* Info */}
+            <div style={{ padding: "20px 24px" }}>
+              <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>{ficheCoach.prenom} {ficheCoach.nom}</h2>
+              <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>{ficheCoach.role} · {ficheCoach.sport_principal}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>PAYS</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{ficheCoach.pays || "—"}</div>
+                </div>
+                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>LANGUES</div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>{ficheCoach.langues || "—"}</div>
+                </div>
+                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>EMAIL</div>
+                  <div style={{ fontSize: 13 }}>{ficheCoach.email || "—"}</div>
+                </div>
+                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                  <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>TÉLÉPHONE</div>
+                  <div style={{ fontSize: 13 }}>{ficheCoach.telephone || "—"}</div>
+                </div>
+              </div>
+              {/* Sessions */}
+              <div style={{ background: "#534AB711", border: "1px solid #534AB733", borderRadius: 12, padding: "16px" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Sessions</div>
+                <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#534AB7" }}>{ficheCoach.sessions_completees || 0}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>Complétées</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#185FA5" }}>{ficheCoach.sessions_programmees || 0}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>Programmées</div>
+                  </div>
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#1D9E75" }}>{ficheCoach.sessions_programmees > 0 ? Math.round((ficheCoach.sessions_completees / ficheCoach.sessions_programmees) * 100) : 0}%</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>Taux</div>
+                  </div>
+                </div>
+                <div style={{ background: "#e8e6de", borderRadius: 6, height: 8 }}>
+                  <div style={{ background: "#534AB7", borderRadius: 6, height: 8, width: Math.min(ficheCoach.sessions_programmees > 0 ? Math.round((ficheCoach.sessions_completees / ficheCoach.sessions_programmees) * 100) : 0, 100) + "%" }} />
+                </div>
+              </div>
+              {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>✓ Background check : {ficheCoach.background_check}</div>}
+            </div>
+          </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Email"><input style={inp} type="email" value={coachEdit.email || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {email: e.target.value})); }} /></Field>
-          <Field label="Téléphone"><input style={inp} value={coachEdit.telephone || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {telephone: e.target.value})); }} /></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Pays"><input style={inp} value={coachEdit.pays || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {pays: e.target.value})); }} /></Field>
-          <Field label="Age"><input type="number" style={inp} value={coachEdit.age || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {age: e.target.value})); }} /></Field>
-        </div>
-        <Field label="Langues"><input style={inp} value={coachEdit.langues || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {langues: e.target.value})); }} placeholder="Ex: FRA, ENG, VN" /></Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Sport">
-            <select style={sel} value={coachEdit.sport_principal || "Rugby"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sport_principal: e.target.value})); }}>
-              {["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
-            </select>
-          </Field>
-          <Field label="Rôle">
-            <select style={sel} value={coachEdit.role || "Benevole"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {role: e.target.value})); }}>
-              {["Coach principal","Benevole","Staff","Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
-            </select>
-          </Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-          <Field label="Background check"><input style={inp} value={coachEdit.background_check || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {background_check: e.target.value})); }} /></Field>
-          <Field label="Sessions programmées"><input type="number" style={inp} value={coachEdit.sessions_programmees || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sessions_programmees: e.target.value})); }} /></Field>
-          <Field label="Sessions complétées"><input type="number" style={inp} value={coachEdit.sessions_completees || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sessions_completees: e.target.value})); }} /></Field>
-        </div>
-        <Field label="Statut">
-          <select style={sel} value={coachEdit.statut || "Actif"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {statut: e.target.value})); }}>
-            {["Actif","Occasionnel","Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
-          </select>
-        </Field>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={function() { setCoachEditModal(false); }} style={btnS}>Annuler</button>
-          <button onClick={handleCoachUpdate} style={btnP}>Enregistrer</button>
-        </div>
-      </Modal>}
+      )}
 
-      <Modal open={modal} onClose={function() { set<Modal(false); }} title="Nouveau coach">
+      {/* ADD MODAL */}
+      <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau coach">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Prénom *"><input style={inp} value={form.prenom} onChange={function(e) { set("prenom", e.target.value); }} /></Field>
           <Field label="Nom *"><input style={inp} value={form.nom} onChange={function(e) { set("nom", e.target.value); }} /></Field>
         </div>
         <Field label="Email"><input style={inp} type="email" value={form.email} onChange={function(e) { set("email", e.target.value); }} /></Field>
         <Field label="Téléphone"><input style={inp} value={form.telephone} onChange={function(e) { set("telephone", e.target.value); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Pays"><input style={inp} value={form.pays} onChange={function(e) { set("pays", e.target.value); }} /></Field>
+          <Field label="Langues"><input style={inp} value={form.langues} onChange={function(e) { set("langues", e.target.value); }} placeholder="FRA, ENG, VN" /></Field>
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Sport">
             <select style={sel} value={form.sport_principal} onChange={function(e) { set("sport_principal", e.target.value); }}>
