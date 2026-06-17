@@ -1252,16 +1252,8 @@ function Evenements() {
       {editingEvt && <Modal open={editEvtModalOpen} onClose={function() { setEditEvtModal(false); }} title={"Modifier — " + (editingEvt.titre || "")}>
         <Field label="Titre *"><input style={inp} value={editingEvt.titre || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { titre: e.target.value })); }} /></Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Type">
-            <select style={sel} value={editingEvt.type || "Entrainement"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { type: e.target.value })); }}>
-              {["Entrainement","Tournoi","Formation","Match","Evenement special"].map(function(t) { return <option key={t}>{t}</option>; })}
-            </select>
-          </Field>
-          <Field label="Statut">
-            <select style={sel} value={editingEvt.statut || "Planifie"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { statut: e.target.value })); }}>
-              {["Planifie","En cours","Termine","Annule"].map(function(t) { return <option key={t}>{t}</option>; })}
-            </select>
-          </Field>
+          <Field label="Type"><select style={sel} value={editingEvt.type || "Entrainement"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { type: e.target.value })); }}>{["Entrainement","Tournoi","Formation","Match","Evenement special"].map(function(t) { return <option key={t}>{t}</option>; })}</select></Field>
+          <Field label="Statut"><select style={sel} value={editingEvt.statut || "Planifie"} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { statut: e.target.value })); }}>{["Planifie","En cours","Termine","Annule"].map(function(t) { return <option key={t}>{t}</option>; })}</select></Field>
         </div>
         <Field label="Date et heure *"><input type="datetime-local" style={inp} value={editingEvt.date_debut ? editingEvt.date_debut.slice(0,16) : ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { date_debut: e.target.value })); }} /></Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -1282,7 +1274,24 @@ function Evenements() {
             </select>
           </Field>
         </div>
-        <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={editingEvt.notes || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { notes: e.target.value })); }} /></Field>
+        <div style={{ borderTop: "1px solid #f0ede6", margin: "12px 0" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>🏉 Coaches assignés ({editEvtCoaches.length})</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 180, overflowY: "auto" }}>
+          {coaches.map(function(c) {
+            var isSel = editEvtCoaches.indexOf(c.id) !== -1;
+            return (
+              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: "1px solid " + (isSel ? "#534AB7" : "#e8e6de"), background: isSel ? "#534AB711" : "#fff", cursor: "pointer" }}>
+                <input type="checkbox" checked={isSel} onChange={function() {
+                  if (isSel) setEditEvtCoaches(editEvtCoaches.filter(function(id) { return id !== c.id; }));
+                  else setEditEvtCoaches(editEvtCoaches.concat([c.id]));
+                }} style={{ accentColor: "#534AB7" }} />
+                <span style={{ fontSize: 13, flex: 1 }}>{c.prenom} {c.nom}</span>
+                <span style={{ fontSize: 11, color: "#aaa" }}>{c.pays}</span>
+              </label>
+            );
+          })}
+        </div>
+        <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50, marginTop: 12 })} value={editingEvt.notes || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { notes: e.target.value })); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setEditEvtModal(false); }} style={btnS}>Annuler</button>
           <button onClick={handleUpdateEvt} style={btnP}>Enregistrer</button>
