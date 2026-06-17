@@ -393,10 +393,9 @@ function Evenements() {
   var ps = useState([]); var partenaires = ps[0]; var setPartenaires = ps[1];
   var epMap = useState({}); var evtPartenaires = epMap[0]; var setEvtPartenaires = epMap[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
-  var fs2 = useState("Tous"); var filtre = fs2[0]; var setFiltre = fs2[1];
+  var viewState = useState("liste"); var view = viewState[0]; var setView = viewState[1];
+  var monthState = useState(new Date()); var currentMonth = monthState[0]; var setCurrentMonth = monthState[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
-  var ems = useState(false); var editModal = ems[0]; var setEditModal = ems[1];
-  var efs = useState(null); var editForm = efs[0]; var setEditForm = efs[1];
   var detailState = useState(null); var detailEvt = detailState[0]; var setDetailEvt = detailState[1];
 
   var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "" };
@@ -408,13 +407,12 @@ function Evenements() {
 
   useEffect(function() {
     Promise.all([
-      sbFetch("evenements", { select: "*", order: "date_debut.desc" }),
+      sbFetch("evenements", { select: "*", order: "date_debut.asc" }),
       sbFetch("partenaires", { select: "*", filter: "statut=eq.Actif", order: "nom.asc" }),
       sbFetch("evenement_partenaires", { select: "*" }),
     ]).then(function(r) {
       setData(r[0]);
       setPartenaires(r[1]);
-      // Build map: evenement_id -> [partenaire_id]
       var map = {};
       r[2].forEach(function(ep) {
         if (!map[ep.evenement_id]) map[ep.evenement_id] = [];
@@ -425,14 +423,16 @@ function Evenements() {
     });
   }, []);
 
-  var types = ["Tous","Entrainement","Tournoi","Formation","Match","Evenement special"];
-  var filtered = filtre === "Tous" ? data : data.filter(function(e) { return e.type === filtre; });
-
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
 
-  function resetForm() {
-    setForm(EMPTY_FORM);
+  function resetForm(dateStr) {
+    setForm(Object.assign({}, EMPTY_FORM, { date_debut: dateStr || "" }));
     setSelectedONG([]); setSelectedShelter([]); setSelectedEcole([]); setSelectedSponsor([]);
+  }
+
+  function openModalForDate(dateStr) {
+    resetForm(dateStr ? dateStr + "T08:00" : "");
+    setModal(true);
   }
 
   function handleAdd() {
@@ -440,13 +440,11 @@ function Evenements() {
     if (payload.nombre_enfants_presents === "") delete payload.nombre_enfants_presents;
     sbInsert("evenements", payload).then(function(rows) {
       var evt = rows[0];
-      var allSelected = [].concat(
-        selectedONG, selectedShelter, selectedEcole, selectedSponsor
-      );
+      var allSelected = [].concat(selectedONG, selectedShelter, selectedEcole, selectedSponsor);
       var liaisons = allSelected.map(function(pid) { return { evenement_id: evt.id, partenaire_id: pid }; });
-      var insertPromise = liaisons.length ? sbInsertMany("evenement_partenaires", liaisons) : Promise.resolve([]);
-      return insertPromise.then(function() {
-        setData([evt].concat(data));
+      var p = liaisons.length ? sbInsertMany("evenement_partenaires", liaisons) : Promise.resolve([]);
+      return p.then(function() {
+        setData(data.concat(evt).sort(function(a,b){ return a.date_debut > b.date_debut ? 1 : -1; }));
         var newMap = Object.assign({}, evtPartenaires);
         newMap[evt.id] = allSelected;
         setEvtPartenaires(newMap);
@@ -461,56 +459,65 @@ function Evenements() {
     return partenaires.filter(function(p) { return ids.indexOf(p.id) !== -1; });
   }
 
+  // Calendar helpers
+  function getDaysInMonth(date) {
+    var year = date.getFullYear(); var month = date.getMonth();
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    return { firstDay: firstDay, daysInMonth: daysInMonth, year: year, month: month };
+  }
+
+  function getEventsForDay(year, month, day) {
+    var dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+    return data.filter(function(e) { return e.date_debut && e.date_debut.startsWith(dateStr); });
+  }
+
+  var MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var DAYS_FR = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+  var STATUT_EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+
   if (loading) return <Spinner />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Toolbar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {types.map(function(t) {
-            return <button key={t} onClick={function() { setFiltre(t); }} style={{ padding: "5px 14px", borderRadius: 20, border: "1px solid " + (filtre === t ? "#534AB7" : "#ddd"), background: filtre === t ? "#534AB7" : "#fff", color: filtre === t ? "#fff" : "#555", cursor: "pointer", fontSize: 13 }}>{t}</button>;
-          })}
+        <div style={{ display: "flex", gap: 4, background: "#f0ede6", borderRadius: 8, padding: 3 }}>
+          <button onClick={function() { setView("liste"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "liste" ? "#fff" : "transparent", color: view === "liste" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "liste" ? 600 : 400, boxShadow: view === "liste" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>☰ Liste</button>
+          <button onClick={function() { setView("calendrier"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "calendrier" ? "#fff" : "transparent", color: view === "calendrier" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "calendrier" ? 600 : 400, boxShadow: view === "calendrier" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>📅 Calendrier</button>
         </div>
-        <button onClick={function() { resetForm(); setModal(true); }} style={btnA}>+ Ajouter</button>
+        <button onClick={function() { openModalForDate(""); }} style={btnA}>+ Ajouter</button>
       </div>
 
-      {filtered.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {filtered.map(function(e) {
+      {/* LISTE VIEW */}
+      {view === "liste" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {data.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : data.map(function(e) {
             var parts = getPartenairesForEvt(e.id);
             var isOpen = detailEvt === e.id;
+            var color = STATUT_EVT_COLOR[e.statut] || "#888";
             return (
               <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, overflow: "hidden" }}>
                 <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", padding: "14px 16px", cursor: "pointer", gap: 12 }}>
+                  <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
-                    <div style={{ fontSize: 12, color: "#999", marginTop: 3 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
+                    <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
                   </div>
                   {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
                   <Badge s={e.statut} />
-                  <span style={{ color: "#aaa", fontSize: 16 }}>{isOpen ? "▲" : "▼"}</span>
+                  <span style={{ color: "#ccc" }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
                 {isOpen && (
-                  <div style={{ borderTop: "1px solid #f0ede6", padding: "14px 16px", background: "#fafaf8" }}>
-                    {parts.length === 0 ? (
-                      <div style={{ fontSize: 13, color: "#aaa" }}>Aucun partenaire lié à cet événement</div>
-                    ) : (
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>Partenaires</div>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {["ONG","Shelter","Ecole","Sponsor"].map(function(type) {
-                            var typeparts = parts.filter(function(p) { return p.type === type; });
-                            return typeparts.map(function(p) {
-                              return (
-                                <div key={p.id} style={{ background: TYPE_COLOR[p.type] + "11", border: "1px solid " + TYPE_COLOR[p.type] + "44", borderRadius: 8, padding: "6px 12px" }}>
-                                  <div style={{ fontSize: 12, color: TYPE_COLOR[p.type], fontWeight: 600 }}>{TYPE_ICON[p.type]} {p.type}</div>
-                                  <div style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a" }}>{p.nom}</div>
-                                  {p.contact_nom && <div style={{ fontSize: 12, color: "#888" }}>{p.contact_nom}</div>}
-                                </div>
-                              );
-                            });
-                          })}
-                        </div>
+                  <div style={{ borderTop: "1px solid #f0ede6", padding: "12px 16px", background: "#fafaf8" }}>
+                    {parts.length === 0 ? <div style={{ fontSize: 13, color: "#aaa" }}>Aucun partenaire lié</div> : (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {parts.map(function(p) {
+                          return <div key={p.id} style={{ background: TYPE_COLOR[p.type] + "11", border: "1px solid " + TYPE_COLOR[p.type] + "44", borderRadius: 8, padding: "6px 12px" }}>
+                            <div style={{ fontSize: 11, color: TYPE_COLOR[p.type], fontWeight: 600 }}>{TYPE_ICON[p.type]} {p.type}</div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nom}</div>
+                          </div>;
+                        })}
                       </div>
                     )}
                     {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 10 }}>{e.notes}</div>}
@@ -522,6 +529,50 @@ function Evenements() {
         </div>
       )}
 
+      {/* CALENDRIER VIEW */}
+      {view === "calendrier" && (function() {
+        var cal = getDaysInMonth(currentMonth);
+        var blanks = Array(cal.firstDay).fill(null);
+        var days = Array.from({length: cal.daysInMonth}, function(_, i) { return i + 1; });
+        var today = new Date();
+        return (
+          <div style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, overflow: "hidden" }}>
+            {/* Month nav */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #f0ede6" }}>
+              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month - 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>‹</button>
+              <span style={{ fontWeight: 700, fontSize: 16, color: "#2c2c2a" }}>{MONTHS_FR[cal.month]} {cal.year}</span>
+              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month + 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>›</button>
+            </div>
+            {/* Day headers */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid #f0ede6" }}>
+              {DAYS_FR.map(function(d) { return <div key={d} style={{ padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#aaa" }}>{d}</div>; })}
+            </div>
+            {/* Days grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+              {blanks.map(function(_, i) { return <div key={"b"+i} style={{ minHeight: 80, borderRight: "1px solid #f5f3ee", borderBottom: "1px solid #f5f3ee", background: "#fafaf8" }} />; })}
+              {days.map(function(day) {
+                var evts = getEventsForDay(cal.year, cal.month, day);
+                var isToday = today.getFullYear() === cal.year && today.getMonth() === cal.month && today.getDate() === day;
+                var dateStr = cal.year + "-" + String(cal.month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+                return (
+                  <div key={day} onClick={function() { openModalForDate(dateStr); }} style={{ minHeight: 80, borderRight: "1px solid #f5f3ee", borderBottom: "1px solid #f5f3ee", padding: "6px 4px", cursor: "pointer", background: isToday ? "#534AB711" : "#fff", transition: "background .15s" }}
+                    onMouseEnter={function(e) { if (!isToday) e.currentTarget.style.background = "#f7f5f0"; }}
+                    onMouseLeave={function(e) { e.currentTarget.style.background = isToday ? "#534AB711" : "#fff"; }}>
+                    <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 400, color: isToday ? "#534AB7" : "#555", textAlign: "right", marginBottom: 4 }}>{isToday ? <span style={{ background: "#534AB7", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{day}</span> : day}</div>
+                    {evts.slice(0, 3).map(function(e) {
+                      var color = STATUT_EVT_COLOR[e.statut] || "#888";
+                      return <div key={e.id} onClick={function(ev) { ev.stopPropagation(); setDetailEvt(e.id); setView("liste"); }} style={{ fontSize: 10, background: color + "22", color: color, borderRadius: 4, padding: "2px 4px", marginBottom: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", fontWeight: 500 }}>{e.titre}</div>;
+                    })}
+                    {evts.length > 3 && <div style={{ fontSize: 10, color: "#aaa" }}>+{evts.length - 3}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ADD MODAL */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouvel événement">
         <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} placeholder="Ex: Rugby à 7 — District 9" /></Field>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -541,10 +592,8 @@ function Evenements() {
           <Field label="Lieu"><input style={inp} value={form.lieu} onChange={function(e) { set("lieu", e.target.value); }} /></Field>
           <Field label="Nb enfants"><input type="number" style={inp} value={form.nombre_enfants_presents} onChange={function(e) { set("nombre_enfants_presents", e.target.value); }} /></Field>
         </div>
-
-        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 16px" }} />
+        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
         <div style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 12 }}>Partenaires liés</div>
-
         {[{type:"ONG",sel:selectedONG,setSel:setSelectedONG},{type:"Shelter",sel:selectedShelter,setSel:setSelectedShelter},{type:"Ecole",sel:selectedEcole,setSel:setSelectedEcole},{type:"Sponsor",sel:selectedSponsor,setSel:setSelectedSponsor}].map(function(item) {
           return (
             <div key={item.type} style={{ marginBottom: 14 }}>
@@ -553,7 +602,6 @@ function Evenements() {
             </div>
           );
         })}
-
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50 })} value={form.notes} onChange={function(e) { set("notes", e.target.value); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setModal(false); }} style={btnS}>Annuler</button>
