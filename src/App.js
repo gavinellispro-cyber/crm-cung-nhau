@@ -569,6 +569,8 @@ function Coaches() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
+  var ces = useState(false); var coachEditModal = ces[0]; var setCoachEditModal = ces[1];
+  var cef = useState(null); var coachEdit = cef[0]; var setCoachEdit = cef[1];
   var EMPTY = { prenom: "", nom: "", email: "", telephone: "", sport_principal: "Rugby", role: "Benevole", statut: "Actif" };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
@@ -576,12 +578,22 @@ function Coaches() {
   function handleAdd() {
     sbInsert("coaches", form).then(function(rows) { setData(data.concat(rows[0])); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
   }
+
+  function handleCoachUpdate() {
+    var payload = Object.assign({}, coachEdit);
+    delete payload.id; delete payload.created_at; delete payload.updated_at;
+    sbUpdate("coaches", coachEdit.id, payload).then(function() {
+      setData(data.map(function(c) { return c.id === coachEdit.id ? Object.assign({}, c, payload) : c; }));
+      setCoachEditModal(false); setCoachEdit(null);
+    }).catch(function(e) { alert(e.message); });
+  }
+  function setCE(k, v) { setCoachEdit(Object.assign({}, coachEdit, { [k]: v })); }
   if (loading) return <Spinner />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div style={{ display: "flex", justifyContent: "flex-end" }}><button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button></div>
       {data.length === 0 ? <Empty msg="Aucun coach" /> : (
-        <TableUI headers={["Nom", "Sport", "Rôle", "Contact", "Statut"]}>
+        <TableUI headers={["Nom", "Pays", "Langues", "Rôle", "Background", "Sessions", "Statut", ""]}>
           {data.map(function(c) { return (
             <tr key={c.id} style={{ borderBottom: "1px solid #f0ede6" }}>
               <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500 }}>{c.prenom} {c.nom}</td>
@@ -593,7 +605,50 @@ function Coaches() {
           ); })}
         </TableUI>
       )}
-      <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau coach">
+
+      {coachEdit && <Modal open={coachEditModal} onClose={function() { setCoachEditModal(false); }} title={"Modifier — " + (coachEdit.prenom || "") + " " + (coachEdit.nom || "")}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Prénom"><input style={inp} value={coachEdit.prenom || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {prenom: e.target.value})); }} /></Field>
+          <Field label="Nom"><input style={inp} value={coachEdit.nom || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {nom: e.target.value})); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Email"><input style={inp} type="email" value={coachEdit.email || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {email: e.target.value})); }} /></Field>
+          <Field label="Téléphone"><input style={inp} value={coachEdit.telephone || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {telephone: e.target.value})); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Pays"><input style={inp} value={coachEdit.pays || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {pays: e.target.value})); }} /></Field>
+          <Field label="Age"><input type="number" style={inp} value={coachEdit.age || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {age: e.target.value})); }} /></Field>
+        </div>
+        <Field label="Langues"><input style={inp} value={coachEdit.langues || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {langues: e.target.value})); }} placeholder="Ex: FRA, ENG, VN" /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Sport">
+            <select style={sel} value={coachEdit.sport_principal || "Rugby"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sport_principal: e.target.value})); }}>
+              {["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
+          <Field label="Rôle">
+            <select style={sel} value={coachEdit.role || "Benevole"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {role: e.target.value})); }}>
+              {["Coach principal","Benevole","Staff","Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+          <Field label="Background check"><input style={inp} value={coachEdit.background_check || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {background_check: e.target.value})); }} /></Field>
+          <Field label="Sessions programmées"><input type="number" style={inp} value={coachEdit.sessions_programmees || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sessions_programmees: e.target.value})); }} /></Field>
+          <Field label="Sessions complétées"><input type="number" style={inp} value={coachEdit.sessions_completees || ""} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {sessions_completees: e.target.value})); }} /></Field>
+        </div>
+        <Field label="Statut">
+          <select style={sel} value={coachEdit.statut || "Actif"} onChange={function(e) { setCoachEdit(Object.assign({}, coachEdit, {statut: e.target.value})); }}>
+            {["Actif","Occasionnel","Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
+          </select>
+        </Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setCoachEditModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleCoachUpdate} style={btnP}>Enregistrer</button>
+        </div>
+      </Modal>}
+
+      <Modal open={modal} onClose={function() { set<Modal(false); }} title="Nouveau coach">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Prénom *"><input style={inp} value={form.prenom} onChange={function(e) { set("prenom", e.target.value); }} /></Field>
           <Field label="Nom *"><input style={inp} value={form.nom} onChange={function(e) { set("nom", e.target.value); }} /></Field>
