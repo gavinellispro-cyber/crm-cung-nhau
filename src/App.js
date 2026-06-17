@@ -597,10 +597,13 @@ function Coaches() {
           {data.map(function(c) { return (
             <tr key={c.id} style={{ borderBottom: "1px solid #f0ede6" }}>
               <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500 }}>{c.prenom} {c.nom}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.sport_principal}</td>
+              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.pays || "—"}</td>
+              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.langues || "—"}</td>
               <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.role}</td>
-              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.email || c.telephone || "—"}</td>
+              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{c.background_check || "—"}</td>
+              <td style={{ padding: "10px 12px", fontSize: 13, color: "#666", textAlign: "center" }}>{(c.sessions_completees || 0) + "/" + (c.sessions_programmees || 0)}</td>
               <td style={{ padding: "10px 12px" }}><Badge s={c.statut} /></td>
+              <td style={{ padding: "10px 12px" }}><button onClick={function() { setCoachEdit(c); setCoachEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7" }}>✏️ Modifier</button></td>
             </tr>
           ); })}
         </TableUI>
