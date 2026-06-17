@@ -215,9 +215,10 @@ function Dashboard() {
         <KpiCard label="Valeur sponsors" value={vnd(valeur)} color="#534AB7" />
       </div>
       <SectionTitle>Opérations</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
         <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
+        <KpiCard label="⏳ Actions en attente" value={notifications.length} color={notifications.length > 0 ? "#BA7517" : "#888"} sub="à relancer" />
       </div>
     </div>
   );
@@ -246,19 +247,12 @@ function FichePartenaire(props) {
   function setF(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
 
   function handleAddAction() {
-    var payload = Object.assign({}, form, { partenaire_id: p.id, statut: "A faire" });
+    var payload = Object.assign({}, form, { partenaire_id: p.id, statut: "En attente" });
     sbInsert("actions_partenaires", payload).then(function(rows) {
       setActions(actions.concat(rows[0]));
       setModal(false);
       setForm(EMPTY_ACTION);
     }).catch(function(e) { alert(e.message); });
-  }
-
-  function toggleDone(a) {
-    var newStatut = a.statut === "Fait" ? "A faire" : "Fait";
-    sbUpdate("actions_partenaires", a.id, { statut: newStatut }).then(function() {
-      setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, { statut: newStatut }) : x; }));
-    });
   }
 
   function saveComment(a) {
@@ -270,29 +264,54 @@ function FichePartenaire(props) {
   }
 
   var today = new Date().toISOString().split("T")[0];
-  var aVenir = actions.filter(function(a) { return a.statut === "A faire" && a.date_prevue >= today; });
-  var enRetard = actions.filter(function(a) { return a.statut === "A faire" && a.date_prevue < today; });
-  var faites = actions.filter(function(a) { return a.statut === "Fait"; });
+  var aVenir = actions.filter(function(a) { return a.statut === "En attente" && a.date_prevue >= today; });
+  var enRetard = actions.filter(function(a) { return a.statut === "En attente" && a.date_prevue < today; });
+  var faites = actions.filter(function(a) { return a.statut === "Confirme"; });
 
   var TYPE_ACTION_ICON = { "Visite terrain": "🏃", "RDV": "🤝", "Appel": "📞", "Email": "✉️", "Autre": "📌" };
+
+  function deleteAction(a) {
+    if (!window.confirm("Supprimer cette action ?")) return;
+    fetch(SUPABASE_URL + "/rest/v1/actions_partenaires?id=eq." + a.id, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    }).then(function() {
+      setActions(actions.filter(function(x) { return x.id !== a.id; }));
+    });
+  }
+
+  function changeStatut(a, newStatut) {
+    sbUpdate("actions_partenaires", a.id, { statut: newStatut }).then(function() {
+      setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, { statut: newStatut }) : x; }));
+    });
+  }
 
   function ActionItem(props2) {
     var a = props2.action;
     var isEditing = editingComment === a.id;
-    var isLate = a.statut === "A faire" && a.date_prevue < today;
+    var isLate = a.statut === "En attente" && a.date_prevue < today;
+    var STATUT_CFG = {
+      "Confirme":   { color: "#1D9E75", bg: "#1D9E7522", icon: "✅", label: "Confirmé" },
+      "En attente": { color: "#BA7517", bg: "#BA751722", icon: "⏳", label: "En attente" },
+    };
+    var cfg = STATUT_CFG[a.statut] || STATUT_CFG["En attente"];
     return (
       <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-          <div onClick={function() { toggleDone(a); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (a.statut === "Fait" ? "#1D9E75" : isLate ? "#E24B4A" : "#534AB7"), background: a.statut === "Fait" ? "#1D9E75" : "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {a.statut === "Fait" && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
-          </div>
+          <div style={{ flexShrink: 0, marginTop: 2, fontSize: 20 }}>{cfg.icon}</div>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: a.statut === "Fait" ? "#aaa" : "#2c2c2a", textDecoration: a.statut === "Fait" ? "line-through" : "none" }}>{TYPE_ACTION_ICON[a.type]} {a.titre}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: a.statut === "Confirme" ? "#aaa" : "#2c2c2a", textDecoration: a.statut === "Confirme" ? "line-through" : "none" }}>{TYPE_ACTION_ICON[a.type]} {a.titre}</span>
               <span style={{ fontSize: 11, background: "#f0ede6", color: "#888", borderRadius: 12, padding: "2px 8px" }}>{a.type}</span>
-              {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>En retard</span>}
+              {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
             </div>
             <div style={{ fontSize: 12, color: "#999", marginTop: 3 }}>📅 {a.date_prevue}{a.heure ? " à " + a.heure : ""}</div>
+            {/* Boutons statut */}
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button onClick={function() { changeStatut(a, "Confirme"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "Confirme" ? "#1D9E75" : "#ddd"), background: a.statut === "Confirme" ? "#1D9E7522" : "#fff", color: a.statut === "Confirme" ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "Confirme" ? 600 : 400 }}>✅ Confirmé</button>
+              <button onClick={function() { changeStatut(a, "En attente"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "En attente" ? "#BA7517" : "#ddd"), background: a.statut === "En attente" ? "#BA751722" : "#fff", color: a.statut === "En attente" ? "#BA7517" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "En attente" ? 600 : 400 }}>⏳ En attente</button>
+              <button onClick={function() { deleteAction(a); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #E24B4A44", background: "#fff", color: "#E24B4A", cursor: "pointer", fontSize: 12, marginLeft: "auto" }}>🗑️ Supprimer</button>
+            </div>
             {/* Commentaire */}
             <div style={{ marginTop: 8 }}>
               {isEditing ? (
@@ -358,7 +377,7 @@ function FichePartenaire(props) {
               )}
               {faites.length > 0 && (
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#1D9E75", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>✅ Complétées ({faites.length})</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#1D9E75", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>✅ Confirmées ({faites.length})</div>
                   {faites.map(function(a) { return <ActionItem key={a.id} action={a} />; })}
                 </div>
               )}
@@ -1041,7 +1060,7 @@ export default function App() {
     var tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
     sbFetch("actions_partenaires", {
       select: "*",
-      filter: "statut=eq.A+faire&date_prevue=lte." + tomorrow,
+      filter: "statut=eq.En+attente&date_prevue=lte." + tomorrow,
       order: "date_prevue.asc"
     }).then(function(rows) {
       setNotifications(rows);
