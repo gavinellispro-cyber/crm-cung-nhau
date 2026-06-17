@@ -233,6 +233,152 @@ function Dashboard() {
   );
 }
 
+// ── DOCUMENTS (shared component) ─────────────────────────────
+function DocumentsSection(props) {
+  var entityType = props.entityType; // "partenaire" or "coach"
+  var entityId = props.entityId;
+
+  var docsState = useState([]); var docs = docsState[0]; var setDocs = docsState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var uploadingState = useState(false); var uploading = uploadingState[0]; var setUploading = uploadingState[1];
+  var dossierState = useState("General"); var dossier = dossierState[0]; var setDossier = dossierState[1];
+  var newDossierState = useState(false); var newDossier = newDossierState[0]; var setNewDossier = newDossierState[1];
+  var newDossierNameState = useState(""); var newDossierName = newDossierNameState[0]; var setNewDossierName = newDossierNameState[1];
+
+  useEffect(function() {
+    var filter = entityType === "partenaire" ? "partenaire_id=eq." + entityId : "coach_id=eq." + entityId;
+    sbFetch("documents", { select: "*", filter: filter, order: "created_at.desc" })
+      .then(function(rows) { setDocs(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, [entityId]);
+
+  var dossiers = ["General"].concat(docs.reduce(function(acc, d) {
+    if (d.dossier && acc.indexOf(d.dossier) === -1 && d.dossier !== "General") acc.push(d.dossier);
+    return acc;
+  }, []));
+  var filteredDocs = docs.filter(function(d) { return d.dossier === dossier; });
+
+  var FILE_ICONS = { pdf: "📄", jpg: "🖼️", jpeg: "🖼️", png: "🖼️", csv: "📊", xlsx: "📊", xls: "📊", doc: "📝", docx: "📝" };
+  function getIcon(nom) {
+    var ext = (nom || "").split(".").pop().toLowerCase();
+    return FILE_ICONS[ext] || "📎";
+  }
+  function formatSize(bytes) {
+    if (!bytes) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024*1024) return Math.round(bytes/1024) + " KB";
+    return (bytes/1024/1024).toFixed(1) + " MB";
+  }
+
+  function handleUpload(files) {
+    if (!files || !files.length) return;
+    setUploading(true);
+    var file = files[0];
+    var ext = file.name.split(".").pop();
+    var path = entityType + "/" + entityId + "/" + dossier + "/" + Date.now() + "_" + file.name.replace(/\s/g, "_");
+
+    var formData = new FormData();
+    formData.append("", file);
+
+    fetch(SUPABASE_URL + "/storage/v1/object/document/" + path, {
+      method: "POST",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+      body: formData,
+    }).then(function(r) {
+      if (!r.ok) throw new Error("Upload failed");
+      var publicUrl = SUPABASE_URL + "/storage/v1/object/public/document/" + path;
+      var docData = {
+        nom: file.name,
+        type_fichier: ext,
+        taille: file.size,
+        url: publicUrl,
+        chemin_storage: path,
+        dossier: dossier,
+      };
+      if (entityType === "partenaire") docData.partenaire_id = entityId;
+      else docData.coach_id = entityId;
+
+      return sbInsert("documents", docData);
+    }).then(function(rows) {
+      setDocs([rows[0]].concat(docs));
+      setUploading(false);
+    }).catch(function(e) { alert("Erreur upload: " + e.message); setUploading(false); });
+  }
+
+  function handleDelete(doc) {
+    if (!window.confirm("Supprimer " + doc.nom + " ?")) return;
+    fetch(SUPABASE_URL + "/storage/v1/object/document/" + doc.chemin_storage, {
+      method: "DELETE",
+      headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+    }).then(function() {
+      return fetch(SUPABASE_URL + "/rest/v1/documents?id=eq." + doc.id, {
+        method: "DELETE",
+        headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY },
+      });
+    }).then(function() {
+      setDocs(docs.filter(function(d) { return d.id !== doc.id; }));
+    }).catch(function(e) { alert("Erreur: " + e.message); });
+  }
+
+  return (
+    <div style={{ marginTop: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📁 Documents</h3>
+        <label style={Object.assign({}, btnA, { display: "inline-block", cursor: "pointer" })}>
+          {uploading ? "Upload..." : "+ Ajouter"}
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls,.doc,.docx" style={{ display: "none" }} onChange={function(e) { handleUpload(e.target.files); }} />
+        </label>
+      </div>
+
+      {/* Dossiers */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+        {dossiers.map(function(d) {
+          return (
+            <button key={d} onClick={function() { setDossier(d); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid " + (dossier === d ? "#534AB7" : "#ddd"), background: dossier === d ? "#534AB7" : "#fff", color: dossier === d ? "#fff" : "#555", cursor: "pointer", fontSize: 12, fontWeight: dossier === d ? 600 : 400 }}>
+              📁 {d}
+            </button>
+          );
+        })}
+        {newDossier ? (
+          <div style={{ display: "flex", gap: 4 }}>
+            <input autoFocus value={newDossierName} onChange={function(e) { setNewDossierName(e.target.value); }} placeholder="Nom du dossier" style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 12, width: 120 }} onKeyDown={function(e) { if (e.key === "Enter" && newDossierName.trim()) { setDossier(newDossierName.trim()); setNewDossier(false); setNewDossierName(""); } }} />
+            <button onClick={function() { if (newDossierName.trim()) { setDossier(newDossierName.trim()); } setNewDossier(false); setNewDossierName(""); }} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
+          </div>
+        ) : (
+          <button onClick={function() { setNewDossier(true); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px dashed #ddd", background: "#fff", color: "#aaa", cursor: "pointer", fontSize: 12 }}>+ Nouveau dossier</button>
+        )}
+      </div>
+
+      {/* Files list */}
+      {loading ? <Spinner /> : filteredDocs.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "24px", color: "#bbb", fontSize: 13, border: "2px dashed #e8e6de", borderRadius: 10 }}>
+          Aucun document dans ce dossier<br />
+          <label style={{ color: "#534AB7", cursor: "pointer", fontWeight: 500 }}>
+            Cliquez pour uploader
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls,.doc,.docx" style={{ display: "none" }} onChange={function(e) { handleUpload(e.target.files); }} />
+          </label>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {filteredDocs.map(function(doc) {
+            return (
+              <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f7f5f0", borderRadius: 8, padding: "8px 12px" }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{getIcon(doc.nom)}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.nom}</div>
+                  <div style={{ fontSize: 11, color: "#aaa" }}>{formatSize(doc.taille)} · {doc.created_at ? doc.created_at.split("T")[0] : ""}</div>
+                </div>
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", color: "#534AB7", fontSize: 12, textDecoration: "none", flexShrink: 0 }}>⬇️</a>
+                <button onClick={function() { handleDelete(doc); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: "transparent", color: "#E24B4A", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>🗑️</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── FICHE PARTENAIRE ─────────────────────────────────────────
 function FichePartenaire(props) {
   var p = props.partenaire;
@@ -480,6 +626,8 @@ function FichePartenaire(props) {
           </div>
         )}
 
+        <DocumentsSection entityType="partenaire" entityId={p.id} />
+
         {/* Modal edition action */}
         {editingAction && <Modal open={editModal} onClose={function() { setEditModal(false); }} title="Modifier l'action">
           <Field label="Titre *"><input style={inp} value={editingAction.titre || ""} onChange={function(e) { setEditingAction(Object.assign({}, editingAction, { titre: e.target.value })); }} /></Field>
@@ -713,6 +861,86 @@ function CoachMultiSelect(props) {
           </label>
         );
       })}
+    </div>
+  );
+}
+
+// ── CALENDRIER DUPLICATION (composant isolé) ─────────────────
+function DupCalendar(props) {
+  var dupDates = props.dupDates;
+  var setDupDates = props.setDupDates;
+  var dupMonth = props.dupMonth;
+  var setDupMonth = props.setDupMonth;
+
+  var MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var DAYS = ["L","M","M","J","V","S","D"];
+  var year = dupMonth.getFullYear();
+  var month = dupMonth.getMonth();
+  var firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
+  var daysInMonth = new Date(year, month + 1, 0).getDate();
+  var today = new Date().toISOString().split("T")[0];
+
+  function toggleDate(dateStr) {
+    if (dupDates.indexOf(dateStr) !== -1) {
+      setDupDates(dupDates.filter(function(d) { return d !== dateStr; }));
+    } else {
+      setDupDates(dupDates.concat([dateStr]));
+    }
+  }
+
+  function prevMonth(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDupMonth(new Date(year, month - 1, 1));
+  }
+
+  function nextMonth(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDupMonth(new Date(year, month + 1, 1));
+  }
+
+  var cells = [];
+  for (var b = 0; b < firstDay; b++) cells.push(null);
+  for (var d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div style={{ border: "1px solid #e8e6de", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f7f5f0", borderBottom: "1px solid #e8e6de" }}>
+        <button onClick={prevMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>‹</button>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>{MONTHS[month]} {year}</span>
+        <button onClick={nextMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>›</button>
+      </div>
+      <div style={{ padding: "8px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
+          {DAYS.map(function(d, i) {
+            return <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#bbb", padding: "2px 0" }}>{d}</div>;
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+          {cells.map(function(day, i) {
+            if (!day) return <div key={"e"+i} />;
+            var dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
+            var isSelected = dupDates.indexOf(dateStr) !== -1;
+            var isPast = dateStr < today;
+            return (
+              <div key={dateStr}
+                onClick={function() { if (!isPast) toggleDate(dateStr); }}
+                style={{
+                  textAlign: "center", padding: "7px 2px", fontSize: 13,
+                  cursor: isPast ? "not-allowed" : "pointer",
+                  color: isPast ? "#ddd" : isSelected ? "#fff" : "#2c2c2a",
+                  background: isSelected ? "#534AB7" : "transparent",
+                  borderRadius: 6,
+                  fontWeight: isSelected ? 700 : 400,
+                  userSelect: "none",
+                }}>
+                {day}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1044,105 +1272,47 @@ function Evenements() {
       </Modal>}
 
       {/* DUPLICATION MODAL */}
-      {dupSource && <Modal open={dupModal} onClose={function() { setDupModal(false); }} title={"📋 Dupliquer — " + (dupSource.titre || "")}>
-        <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>
-          Cliquez sur autant de dates que vous voulez — naviguez librement entre les mois.
-        </div>
-
-        {/* Mini calendar */}
-        {(function() {
-          var MONTHS_FR2 = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-          var DAYS_FR2 = ["L","M","M","J","V","S","D"];
-          var year = dupMonth.getFullYear();
-          var month = dupMonth.getMonth();
-          var firstDay = (new Date(year, month, 1).getDay() + 6) % 7;
-          var daysInMonth = new Date(year, month + 1, 0).getDate();
-          var blanks = Array(firstDay).fill(null);
-          var days = Array.from({length: daysInMonth}, function(_, i) { return i + 1; });
-          var today = new Date().toISOString().split("T")[0];
-
-          return (
-            <div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <button onClick={function(e) { e.preventDefault(); e.stopPropagation(); var d = new Date(year, month - 1, 1); setDupMonth(d); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>‹</button>
-                <span style={{ fontWeight: 600, fontSize: 15 }}>{MONTHS_FR2[month]} {year}</span>
-                <button onClick={function(e) { e.preventDefault(); e.stopPropagation(); var d = new Date(year, month + 1, 1); setDupMonth(d); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>›</button>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
-                {DAYS_FR2.map(function(d, i) { return <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 600, color: "#bbb", padding: "4px 0" }}>{d}</div>; })}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-                {blanks.map(function(_, i) { return <div key={"b"+i} />; })}
-                {days.map(function(day) {
-                  var dateStr = year + "-" + String(month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
-                  var isSelected = dupDates.indexOf(dateStr) !== -1;
-                  var isPast = dateStr < today;
-                  return (
-                    <div key={day}
-                      onClick={function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isPast) return;
-                        if (isSelected) {
-                          setDupDates(function(prev) { return prev.filter(function(d) { return d !== dateStr; }); });
-                        } else {
-                          setDupDates(function(prev) { return prev.concat([dateStr]); });
-                        }
-                      }}
-                      style={{
-                        textAlign: "center", padding: "8px 2px", fontSize: 13, cursor: isPast ? "default" : "pointer",
-                        color: isPast ? "#ddd" : isSelected ? "#fff" : "#2c2c2a",
-                        background: isSelected ? "#534AB7" : "transparent",
-                        borderRadius: 8, fontWeight: isSelected ? 700 : 400,
-                        border: isSelected ? "none" : "1px solid transparent",
-                        userSelect: "none",
-                      }}
-                      onMouseEnter={function(e) { if (!isPast && !isSelected) e.currentTarget.style.background = "#f0ede6"; }}
-                      onMouseLeave={function(e) { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
-                    >
-                      {day}
-                    </div>
-                  );
-                })}
-              </div>
+      {dupSource && dupModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: 24, width: "100%", maxWidth: 420, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>📋 Dupliquer — {dupSource.titre}</h2>
+              <button onClick={function() { setDupModal(false); setDupDates([]); }} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#aaa" }}>×</button>
             </div>
-          );
-        })()}
+            <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px" }}>Cliquez sur les dates pour les sélectionner ou désélectionner. Naviguez entre les mois librement.</p>
 
-        {/* Selected dates */}
-        <div style={{ marginTop: 16, minHeight: 40 }}>
-          {dupDates.length === 0 ? (
-            <div style={{ fontSize: 13, color: "#bbb", fontStyle: "italic" }}>Aucune date sélectionnée</div>
-          ) : (
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>
-                {dupDates.length} date{dupDates.length > 1 ? "s" : ""} sélectionnée{dupDates.length > 1 ? "s" : ""}
-              </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {dupDates.slice().sort().map(function(d) {
-                  return (
-                    <span key={d}
-                      onClick={function() { setDupDates(function(prev) { return prev.filter(function(x) { return x !== d; }); }); }}
-                      style={{ background: "#534AB7", color: "#fff", borderRadius: 20, padding: "4px 12px", fontSize: 12, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-                      {d} <span style={{ opacity: 0.6, fontWeight: 700 }}>×</span>
-                    </span>
-                  );
-                })}
-              </div>
+            <DupCalendar dupDates={dupDates} setDupDates={setDupDates} dupMonth={dupMonth} setDupMonth={setDupMonth} />
+
+            <div style={{ marginTop: 14, minHeight: 36 }}>
+              {dupDates.length === 0 ? (
+                <div style={{ fontSize: 13, color: "#bbb", fontStyle: "italic" }}>Aucune date sélectionnée</div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 6 }}>{dupDates.length} date{dupDates.length > 1 ? "s" : ""} sélectionnée{dupDates.length > 1 ? "s" : ""}</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {dupDates.slice().sort().map(function(d) {
+                      return (
+                        <span key={d} onClick={function() { setDupDates(dupDates.filter(function(x) { return x !== d; })); }}
+                          style={{ background: "#534AB7", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 12, cursor: "pointer" }}>
+                          {d} ×
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 20, borderTop: "1px solid #f0ede6", paddingTop: 16 }}>
-          <button onClick={function() { setDupModal(false); setDupDates([]); }} style={btnS}>Annuler</button>
-          <button
-            onClick={handleConfirmDuplication}
-            disabled={dupDates.length === 0 || dupLoading}
-            style={Object.assign({}, btnP, { opacity: dupDates.length > 0 && !dupLoading ? 1 : 0.5 })}>
-            {dupLoading ? "Création..." : "✅ Créer " + dupDates.length + " événement" + (dupDates.length > 1 ? "s" : "")}
-          </button>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16, paddingTop: 14, borderTop: "1px solid #f0ede6" }}>
+              <button onClick={function() { setDupModal(false); setDupDates([]); }} style={btnS}>Annuler</button>
+              <button onClick={handleConfirmDuplication} disabled={dupDates.length === 0 || dupLoading}
+                style={Object.assign({}, btnP, { opacity: dupDates.length > 0 && !dupLoading ? 1 : 0.5 })}>
+                {dupLoading ? "Création..." : "✅ Créer " + dupDates.length + " événement" + (dupDates.length > 1 ? "s" : "")}
+              </button>
+            </div>
+          </div>
         </div>
-      </Modal>}
+      )}
 
             {/* ADD MODAL */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouvel événement">
@@ -1207,7 +1377,11 @@ function Coaches() {
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
   var ficheState = useState(null); var ficheCoach = ficheState[0]; var setFicheCoach = ficheState[1];
+  var editCoachModalState = useState(false); var editCoachModal = editCoachModalState[0]; var setEditCoachModal = editCoachModalState[1];
+  var editCoachFormState = useState(null); var editCoachForm = editCoachFormState[0]; var setEditCoachForm = editCoachFormState[1];
   var uploadingState = useState(null); var uploadingId = uploadingState[0]; var setUploadingId = uploadingState[1];
+  var editCoachModalState = useState(false); var editCoachModal = editCoachModalState[0]; var setEditCoachModal = editCoachModalState[1];
+  var editCoachFormState = useState(null); var editCoachForm = editCoachFormState[0]; var setEditCoachForm = editCoachFormState[1];
 
   var EMPTY = { prenom: "", nom: "", email: "", telephone: "", sport_principal: "Rugby", role: "Benevole", statut: "Actif", pays: "", langues: "", background_check: "", sessions_programmees: 0, sessions_completees: 0 };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
@@ -1220,6 +1394,34 @@ function Coaches() {
   function handleAdd() {
     sbInsert("coaches", form).then(function(rows) { setData([rows[0]].concat(data)); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
   }
+
+  function handleUpdateCoach() {
+    var payload = { prenom: editCoachForm.prenom, nom: editCoachForm.nom, email: editCoachForm.email, telephone: editCoachForm.telephone, pays: editCoachForm.pays, langues: editCoachForm.langues, sport_principal: editCoachForm.sport_principal, role: editCoachForm.role, statut: editCoachForm.statut, background_check: editCoachForm.background_check, sessions_programmees: Number(editCoachForm.sessions_programmees) || 0, sessions_completees: Number(editCoachForm.sessions_completees) || 0 };
+    sbUpdate("coaches", editCoachForm.id, payload).then(function() {
+      setData(data.map(function(c) { return c.id === editCoachForm.id ? Object.assign({}, c, payload) : c; }));
+      setFicheCoach(Object.assign({}, ficheCoach, payload));
+      setEditCoachModal(false);
+    }).catch(function(e) { alert(e.message); });
+  }
+  function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
+
+  function handleUpdateCoach() {
+    var payload = {
+      prenom: editCoachForm.prenom, nom: editCoachForm.nom,
+      email: editCoachForm.email, telephone: editCoachForm.telephone,
+      pays: editCoachForm.pays, langues: editCoachForm.langues,
+      sport_principal: editCoachForm.sport_principal, role: editCoachForm.role,
+      statut: editCoachForm.statut, background_check: editCoachForm.background_check,
+      sessions_programmees: editCoachForm.sessions_programmees || 0,
+      sessions_completees: editCoachForm.sessions_completees || 0,
+    };
+    sbUpdate("coaches", editCoachForm.id, payload).then(function() {
+      setData(data.map(function(c) { return c.id === editCoachForm.id ? Object.assign({}, c, payload) : c; }));
+      setFicheCoach(Object.assign({}, ficheCoach, payload));
+      setEditCoachModal(false);
+    }).catch(function(e) { alert(e.message); });
+  }
+  function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
 
   function handlePhotoUpload(coachId, file) {
     if (!file) return;
@@ -1322,6 +1524,8 @@ function Coaches() {
                 </div>
               )}
               <button onClick={function() { setFicheCoach(null); }} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: "50%", width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+              <button onClick={function() { setEditCoachForm(Object.assign({}, ficheCoach)); setEditCoachModal(true); }} style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>✏️ Modifier</button>
+              <button onClick={function() { setEditCoachForm(Object.assign({}, ficheCoach)); setEditCoachModal(true); }} style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>✏️ Modifier</button>
               <label style={{ position: "absolute", bottom: 12, right: 12, background: "#534AB7", color: "#fff", borderRadius: 20, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
                 📷 Changer la photo
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(ficheCoach.id, e.target.files[0]); }} />
@@ -1371,10 +1575,86 @@ function Coaches() {
                 </div>
               </div>
               {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>✓ Background check : {ficheCoach.background_check}</div>}
+              <DocumentsSection entityType="coach" entityId={ficheCoach.id} />
             </div>
           </div>
         </div>
       )}
+
+      {/* EDIT COACH MODAL */}
+      {editCoachForm && <Modal open={editCoachModal} onClose={function() { setEditCoachModal(false); }} title={"Modifier — " + (editCoachForm.prenom || "") + " " + (editCoachForm.nom || "")}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Prénom *"><input style={inp} value={editCoachForm.prenom || ""} onChange={function(e) { setCF("prenom", e.target.value); }} /></Field>
+          <Field label="Nom *"><input style={inp} value={editCoachForm.nom || ""} onChange={function(e) { setCF("nom", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Email"><input style={inp} type="email" value={editCoachForm.email || ""} onChange={function(e) { setCF("email", e.target.value); }} /></Field>
+          <Field label="Téléphone"><input style={inp} value={editCoachForm.telephone || ""} onChange={function(e) { setCF("telephone", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Pays"><input style={inp} value={editCoachForm.pays || ""} onChange={function(e) { setCF("pays", e.target.value); }} /></Field>
+          <Field label="Langues"><input style={inp} value={editCoachForm.langues || ""} onChange={function(e) { setCF("langues", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Sport">
+            <select style={sel} value={editCoachForm.sport_principal || "Rugby"} onChange={function(e) { setCF("sport_principal", e.target.value); }}>
+              {["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
+          <Field label="Rôle">
+            <select style={sel} value={editCoachForm.role || "Benevole"} onChange={function(e) { setCF("role", e.target.value); }}>
+              {["Coach principal","Benevole","Staff","Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Statut">
+            <select style={sel} value={editCoachForm.statut || "Actif"} onChange={function(e) { setCF("statut", e.target.value); }}>
+              {["Actif","Occasionnel","Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
+          <Field label="Background check"><input style={inp} value={editCoachForm.background_check || ""} onChange={function(e) { setCF("background_check", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Sessions programmées"><input type="number" style={inp} value={editCoachForm.sessions_programmees || 0} onChange={function(e) { setCF("sessions_programmees", e.target.value); }} /></Field>
+          <Field label="Sessions complétées"><input type="number" style={inp} value={editCoachForm.sessions_completees || 0} onChange={function(e) { setCF("sessions_completees", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setEditCoachModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleUpdateCoach} style={btnP}>Enregistrer</button>
+        </div>
+      </Modal>}
+
+      {editCoachForm && <Modal open={editCoachModal} onClose={function() { setEditCoachModal(false); }} title={"Modifier — " + (editCoachForm.prenom || "") + " " + (editCoachForm.nom || "")}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Prénom"><input style={inp} value={editCoachForm.prenom || ""} onChange={function(e) { setCF("prenom", e.target.value); }} /></Field>
+          <Field label="Nom"><input style={inp} value={editCoachForm.nom || ""} onChange={function(e) { setCF("nom", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Email"><input style={inp} type="email" value={editCoachForm.email || ""} onChange={function(e) { setCF("email", e.target.value); }} /></Field>
+          <Field label="Téléphone"><input style={inp} value={editCoachForm.telephone || ""} onChange={function(e) { setCF("telephone", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Pays"><input style={inp} value={editCoachForm.pays || ""} onChange={function(e) { setCF("pays", e.target.value); }} /></Field>
+          <Field label="Langues"><input style={inp} value={editCoachForm.langues || ""} onChange={function(e) { setCF("langues", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Sport"><select style={sel} value={editCoachForm.sport_principal || "Rugby"} onChange={function(e) { setCF("sport_principal", e.target.value); }}>{["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s){return <option key={s}>{s}</option>;})}</select></Field>
+          <Field label="Rôle"><select style={sel} value={editCoachForm.role || "Benevole"} onChange={function(e) { setCF("role", e.target.value); }}>{["Coach principal","Benevole","Staff","Coordinateur"].map(function(r){return <option key={r}>{r}</option>;})}</select></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Statut"><select style={sel} value={editCoachForm.statut || "Actif"} onChange={function(e) { setCF("statut", e.target.value); }}>{["Actif","Occasionnel","Inactif"].map(function(s){return <option key={s}>{s}</option>;})}</select></Field>
+          <Field label="Background check"><input style={inp} value={editCoachForm.background_check || ""} onChange={function(e) { setCF("background_check", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Sessions programmées"><input type="number" style={inp} value={editCoachForm.sessions_programmees || 0} onChange={function(e) { setCF("sessions_programmees", e.target.value); }} /></Field>
+          <Field label="Sessions complétées"><input type="number" style={inp} value={editCoachForm.sessions_completees || 0} onChange={function(e) { setCF("sessions_completees", e.target.value); }} /></Field>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setEditCoachModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleUpdateCoach} style={btnP}>Enregistrer</button>
+        </div>
+      </Modal>}
 
       {/* ADD MODAL */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau coach">
