@@ -559,10 +559,38 @@ function Partenaires() {
   );
 }
 
+
+// ── COACH MULTI-SELECT ────────────────────────────────────────
+function CoachMultiSelect(props) {
+  var coaches = props.coaches;
+  var selected = props.selected;
+  var onChange = props.onChange;
+  if (!coaches.length) return <div style={{ fontSize: 12, color: "#aaa", padding: "8px 0" }}>Aucun coach actif</div>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {coaches.map(function(c) {
+        var isSelected = selected.indexOf(c.id) !== -1;
+        return (
+          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? "#534AB7" : "#e8e6de"), background: isSelected ? "#534AB711" : "#fff", cursor: "pointer" }}>
+            <input type="checkbox" checked={isSelected} onChange={function() {
+              if (isSelected) onChange(selected.filter(function(id) { return id !== c.id; }));
+              else onChange(selected.concat(c.id));
+            }} style={{ accentColor: "#534AB7" }} />
+            <span style={{ fontSize: 13, fontWeight: isSelected ? 500 : 400, flex: 1 }}>{c.prenom} {c.nom}</span>
+            <span style={{ fontSize: 12, color: "#aaa" }}>{c.pays || ""} · {c.langues || ""}</span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── ÉVÉNEMENTS ────────────────────────────────────────────────
 function Evenements() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
   var ps = useState([]); var partenaires = ps[0]; var setPartenaires = ps[1];
+  var cs = useState([]); var coaches = cs[0]; var setCoaches = cs[1];
+  var selCoaches = useState([]); var selectedCoaches = selCoaches[0]; var setSelectedCoaches = selCoaches[1];
   var epMap = useState({}); var evtPartenaires = epMap[0]; var setEvtPartenaires = epMap[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var viewState = useState("liste"); var view = viewState[0]; var setView = viewState[1];
@@ -582,6 +610,8 @@ function Evenements() {
       sbFetch("evenements", { select: "*", order: "date_debut.asc" }),
       sbFetch("partenaires", { select: "*", filter: "statut=eq.Actif", order: "nom.asc" }),
       sbFetch("evenement_partenaires", { select: "*" }),
+      sbFetch("coaches", { select: "*", filter: "statut=eq.Actif", order: "nom.asc" }),
+      sbFetch("evenement_coaches", { select: "*" }),
     ]).then(function(r) {
       setData(r[0]);
       setPartenaires(r[1]);
@@ -591,6 +621,7 @@ function Evenements() {
         map[ep.evenement_id].push(ep.partenaire_id);
       });
       setEvtPartenaires(map);
+      setCoaches(r[3]);
       setLoading(false);
     });
   }, []);
@@ -600,6 +631,7 @@ function Evenements() {
   function resetForm(dateStr) {
     setForm(Object.assign({}, EMPTY_FORM, { date_debut: dateStr || "" }));
     setSelectedONG([]); setSelectedShelter([]); setSelectedEcole([]); setSelectedSponsor([]);
+    setSelectedCoaches([]);
   }
 
   function openModalForDate(dateStr) {
@@ -614,12 +646,27 @@ function Evenements() {
       var evt = rows[0];
       var allSelected = [].concat(selectedONG, selectedShelter, selectedEcole, selectedSponsor);
       var liaisons = allSelected.map(function(pid) { return { evenement_id: evt.id, partenaire_id: pid }; });
-      var p = liaisons.length ? sbInsertMany("evenement_partenaires", liaisons) : Promise.resolve([]);
-      return p.then(function() {
+      var coachLiaisons = selectedCoaches.map(function(cid) { return { evenement_id: evt.id, coach_id: cid, heures_prestees: 0 }; });
+      var p1 = liaisons.length ? sbInsertMany("evenement_partenaires", liaisons) : Promise.resolve([]);
+      var p2 = coachLiaisons.length ? sbInsertMany("evenement_coaches", coachLiaisons) : Promise.resolve([]);
+      return Promise.all([p1, p2]).then(function() {
+        // Update sessions_programmees for each coach
+        var updatePromises = selectedCoaches.map(function(cid) {
+          var coach = coaches.find(function(c) { return c.id === cid; });
+          if (coach) return sbUpdate("coaches", cid, { sessions_programmees: (Number(coach.sessions_programmees) || 0) + 1 });
+          return Promise.resolve();
+        });
+        return Promise.all(updatePromises);
+      }).then(function() {
         setData(data.concat(evt).sort(function(a,b){ return a.date_debut > b.date_debut ? 1 : -1; }));
         var newMap = Object.assign({}, evtPartenaires);
         newMap[evt.id] = allSelected;
         setEvtPartenaires(newMap);
+        // Update local coaches sessions count
+        setCoaches(coaches.map(function(c) {
+          if (selectedCoaches.indexOf(c.id) !== -1) return Object.assign({}, c, { sessions_programmees: (Number(c.sessions_programmees) || 0) + 1 });
+          return c;
+        }));
         setModal(false);
         resetForm();
       });
@@ -666,6 +713,11 @@ function Evenements() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {data.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : data.map(function(e) {
             var parts = getPartenairesForEvt(e.id);
+            var evtCoachIds = (evtPartenaires[e.id] || []);
+            var evtCoaches = coaches.filter(function(c) {
+              // use evenement_coaches relationship - simplified: coaches assigned
+              return false; // placeholder - will be loaded via separate fetch
+            });
             var isOpen = detailEvt === e.id;
             var color = STATUT_EVT_COLOR[e.statut] || "#888";
             return (
@@ -682,14 +734,27 @@ function Evenements() {
                 </div>
                 {isOpen && (
                   <div style={{ borderTop: "1px solid #f0ede6", padding: "12px 16px", background: "#fafaf8" }}>
-                    {parts.length === 0 ? <div style={{ fontSize: 13, color: "#aaa" }}>Aucun partenaire lié</div> : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        {parts.map(function(p) {
-                          return <div key={p.id} style={{ background: TYPE_COLOR[p.type] + "11", border: "1px solid " + TYPE_COLOR[p.type] + "44", borderRadius: 8, padding: "6px 12px" }}>
-                            <div style={{ fontSize: 11, color: TYPE_COLOR[p.type], fontWeight: 600 }}>{TYPE_ICON[p.type]} {p.type}</div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nom}</div>
-                          </div>;
-                        })}
+                    {parts.length === 0 && evtCoaches.length === 0 ? <div style={{ fontSize: 13, color: "#aaa" }}>Aucun partenaire ou coach lié</div> : (
+                      <div>
+                        {parts.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: evtCoaches.length > 0 ? 10 : 0 }}>
+                          {parts.map(function(p) {
+                            return <div key={p.id} style={{ background: TYPE_COLOR[p.type] + "11", border: "1px solid " + TYPE_COLOR[p.type] + "44", borderRadius: 8, padding: "6px 12px" }}>
+                              <div style={{ fontSize: 11, color: TYPE_COLOR[p.type], fontWeight: 600 }}>{TYPE_ICON[p.type]} {p.type}</div>
+                              <div style={{ fontSize: 13, fontWeight: 500 }}>{p.nom}</div>
+                            </div>;
+                          })}
+                        </div>}
+                        {evtCoaches.length > 0 && <div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#534AB7", marginBottom: 6 }}>🏉 Coaches assignés</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {evtCoaches.map(function(c) {
+                              return <div key={c.id} style={{ background: "#534AB711", border: "1px solid #534AB744", borderRadius: 8, padding: "6px 12px" }}>
+                                <div style={{ fontSize: 13, fontWeight: 500 }}>{c.prenom} {c.nom}</div>
+                                <div style={{ fontSize: 11, color: "#888" }}>{c.pays || ""}</div>
+                              </div>;
+                            })}
+                          </div>
+                        </div>}
                       </div>
                     )}
                     {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 10 }}>{e.notes}</div>}
@@ -774,6 +839,12 @@ function Evenements() {
             </div>
           );
         })}
+        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>🏉 Coaches & bénévoles assignés{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
+        <CoachMultiSelect coaches={coaches} selected={selectedCoaches} onChange={setSelectedCoaches} />
+        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>🏉 Coaches & bénévoles{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
+        <CoachMultiSelect coaches={coaches} selected={selectedCoaches} onChange={setSelectedCoaches} />
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50 })} value={form.notes} onChange={function(e) { set("notes", e.target.value); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setModal(false); }} style={btnS}>Annuler</button>
