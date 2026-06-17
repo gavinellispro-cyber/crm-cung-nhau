@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 const SUPABASE_URL = "https://sxgxuvrqteewihtqdaga.supabase.co";
-const SUPABASE_KEY = "sb_publishable_E6J4Hbe83OIJVBcFDBGlkg_u_FOMDFF";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN4Z3h1dnJxdGVld2lodHFkYWdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NDIzMDMsImV4cCI6MjA5NzIxODMwM30.7g9VtwMLRoAczu0NZbgAylHR67dVgA06nhqEDZ4cKDM";
 
 async function sbFetch(table, options) {
   var opts = options || {};
