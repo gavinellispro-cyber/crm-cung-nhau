@@ -223,6 +223,173 @@ function Dashboard() {
   );
 }
 
+// ── FICHE PARTENAIRE ─────────────────────────────────────────
+function FichePartenaire(props) {
+  var p = props.partenaire;
+  var onClose = props.onClose;
+  var actionsState = useState([]); var actions = actionsState[0]; var setActions = actionsState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var modalState = useState(false); var modal = modalState[0]; var setModal = modalState[1];
+  var EMPTY_ACTION = { titre: "", type: "Visite terrain", date_prevue: "", heure: "", commentaire: "" };
+  var formState = useState(EMPTY_ACTION); var form = formState[0]; var setForm = formState[1];
+  var commentState = useState({}); var comments = commentState[0]; var setComments = commentState[1];
+  var editCommentState = useState(null); var editingComment = editCommentState[0]; var setEditingComment = editCommentState[1];
+
+  useEffect(function() {
+    sbFetch("actions_partenaires", {
+      select: "*",
+      filter: "partenaire_id=eq." + p.id,
+      order: "date_prevue.asc"
+    }).then(function(rows) { setActions(rows); setLoading(false); });
+  }, [p.id]);
+
+  function setF(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
+
+  function handleAddAction() {
+    var payload = Object.assign({}, form, { partenaire_id: p.id, statut: "A faire" });
+    sbInsert("actions_partenaires", payload).then(function(rows) {
+      setActions(actions.concat(rows[0]));
+      setModal(false);
+      setForm(EMPTY_ACTION);
+    }).catch(function(e) { alert(e.message); });
+  }
+
+  function toggleDone(a) {
+    var newStatut = a.statut === "Fait" ? "A faire" : "Fait";
+    sbUpdate("actions_partenaires", a.id, { statut: newStatut }).then(function() {
+      setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, { statut: newStatut }) : x; }));
+    });
+  }
+
+  function saveComment(a) {
+    var txt = comments[a.id] !== undefined ? comments[a.id] : a.commentaire;
+    sbUpdate("actions_partenaires", a.id, { commentaire: txt }).then(function() {
+      setActions(actions.map(function(x) { return x.id === a.id ? Object.assign({}, x, { commentaire: txt }) : x; }));
+      setEditingComment(null);
+    });
+  }
+
+  var today = new Date().toISOString().split("T")[0];
+  var aVenir = actions.filter(function(a) { return a.statut === "A faire" && a.date_prevue >= today; });
+  var enRetard = actions.filter(function(a) { return a.statut === "A faire" && a.date_prevue < today; });
+  var faites = actions.filter(function(a) { return a.statut === "Fait"; });
+
+  var TYPE_ACTION_ICON = { "Visite terrain": "🏃", "RDV": "🤝", "Appel": "📞", "Email": "✉️", "Autre": "📌" };
+
+  function ActionItem(props2) {
+    var a = props2.action;
+    var isEditing = editingComment === a.id;
+    var isLate = a.statut === "A faire" && a.date_prevue < today;
+    return (
+      <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+          <div onClick={function() { toggleDone(a); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + (a.statut === "Fait" ? "#1D9E75" : isLate ? "#E24B4A" : "#534AB7"), background: a.statut === "Fait" ? "#1D9E75" : "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {a.statut === "Fait" && <span style={{ color: "#fff", fontSize: 12 }}>✓</span>}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: a.statut === "Fait" ? "#aaa" : "#2c2c2a", textDecoration: a.statut === "Fait" ? "line-through" : "none" }}>{TYPE_ACTION_ICON[a.type]} {a.titre}</span>
+              <span style={{ fontSize: 11, background: "#f0ede6", color: "#888", borderRadius: 12, padding: "2px 8px" }}>{a.type}</span>
+              {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>En retard</span>}
+            </div>
+            <div style={{ fontSize: 12, color: "#999", marginTop: 3 }}>📅 {a.date_prevue}{a.heure ? " à " + a.heure : ""}</div>
+            {/* Commentaire */}
+            <div style={{ marginTop: 8 }}>
+              {isEditing ? (
+                <div style={{ display: "flex", gap: 6 }}>
+                  <textarea value={comments[a.id] !== undefined ? comments[a.id] : (a.commentaire || "")} onChange={function(e) { setComments(Object.assign({}, comments, { [a.id]: e.target.value })); }} style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13, resize: "vertical", minHeight: 60 }} placeholder="Ajouter un commentaire..." />
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <button onClick={function() { saveComment(a); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>Sauver</button>
+                    <button onClick={function() { setEditingComment(null); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12 }}>Annuler</button>
+                  </div>
+                </div>
+              ) : (
+                <div onClick={function() { setEditingComment(a.id); setComments(Object.assign({}, comments, { [a.id]: a.commentaire || "" })); }} style={{ fontSize: 13, color: a.commentaire ? "#555" : "#bbb", fontStyle: a.commentaire ? "normal" : "italic", cursor: "pointer", padding: "4px 6px", borderRadius: 6, background: "#f7f5f0" }}>
+                  {a.commentaire || "Cliquez pour ajouter un commentaire..."}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
+      <div style={{ background: "#fff", width: "100%", maxWidth: 520, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
+        {/* Header fiche */}
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0ede6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <TypeBadge t={p.type} />
+              <Badge s={p.statut} />
+            </div>
+            <h2 style={{ margin: "8px 0 4px", fontSize: 20, fontWeight: 700, color: "#2c2c2a" }}>{p.nom}</h2>
+            {p.contact_nom && <div style={{ fontSize: 14, color: "#666" }}>👤 {p.contact_nom}</div>}
+            {p.contact_email && <div style={{ fontSize: 13, color: "#534AB7" }}>✉️ {p.contact_email}</div>}
+            {p.contact_tel && <div style={{ fontSize: 13, color: "#666" }}>📞 {p.contact_tel}</div>}
+            {p.ville && <div style={{ fontSize: 13, color: "#666" }}>📍 {p.ville}{p.district ? " — " + p.district : ""}</div>}
+            {p.notes && <div style={{ fontSize: 13, color: "#888", marginTop: 6, fontStyle: "italic" }}>{p.notes}</div>}
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#aaa", lineHeight: 1 }}>×</button>
+        </div>
+
+        {/* Actions */}
+        <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>Actions & Historique</h3>
+            <button onClick={function() { setModal(true); }} style={btnA}>+ Planifier</button>
+          </div>
+
+          {loading ? <Spinner /> : (
+            <div>
+              {enRetard.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#E24B4A", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>⚠️ En retard ({enRetard.length})</div>
+                  {enRetard.map(function(a) { return <ActionItem key={a.id} action={a} />; })}
+                </div>
+              )}
+              {aVenir.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>À venir ({aVenir.length})</div>
+                  {aVenir.map(function(a) { return <ActionItem key={a.id} action={a} />; })}
+                </div>
+              )}
+              {faites.length > 0 && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#1D9E75", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>✅ Complétées ({faites.length})</div>
+                  {faites.map(function(a) { return <ActionItem key={a.id} action={a} />; })}
+                </div>
+              )}
+              {actions.length === 0 && <Empty msg="Aucune action — cliquez + Planifier" />}
+            </div>
+          )}
+        </div>
+
+        {/* Modal ajout action */}
+        <Modal open={modal} onClose={function() { setModal(false); }} title="Planifier une action">
+          <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { setF("titre", e.target.value); }} placeholder="Ex: Visite mensuelle" /></Field>
+          <Field label="Type">
+            <select style={sel} value={form.type} onChange={function(e) { setF("type", e.target.value); }}>
+              {["Visite terrain","RDV","Appel","Email","Autre"].map(function(t) { return <option key={t}>{t}</option>; })}
+            </select>
+          </Field>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field label="Date *"><input type="date" style={inp} value={form.date_prevue} onChange={function(e) { setF("date_prevue", e.target.value); }} /></Field>
+            <Field label="Heure"><input type="time" style={inp} value={form.heure} onChange={function(e) { setF("heure", e.target.value); }} /></Field>
+          </div>
+          <Field label="Commentaire"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 70 })} value={form.commentaire} onChange={function(e) { setF("commentaire", e.target.value); }} placeholder="Notes, contexte, objectifs..." /></Field>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+            <button onClick={function() { setModal(false); }} style={btnS}>Annuler</button>
+            <button onClick={handleAddAction} disabled={!form.titre || !form.date_prevue} style={Object.assign({}, btnP, { opacity: (form.titre && form.date_prevue) ? 1 : 0.5 })}>Enregistrer</button>
+          </div>
+        </Modal>
+      </div>
+    </div>
+  );
+}
+
 // ── PARTENAIRES ───────────────────────────────────────────────
 function Partenaires() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
@@ -231,6 +398,7 @@ function Partenaires() {
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
   var ems = useState(false); var editModal = ems[0]; var setEditModal = ems[1];
   var efs = useState(null); var editForm = efs[0]; var setEditForm = efs[1];
+  var ficheState = useState(null); var ficheId = ficheState[0]; var setFicheId = ficheState[1];
   var EMPTY_FORM = { nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", adresse: "", district: "", nombre_enfants: "", montant_annuel: "", statut: "Actif", notes: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
 
@@ -294,7 +462,9 @@ function Partenaires() {
         <TableUI headers={["ORGANISATION", "TYPE", "LOCATION", "STATUS", "RESPONSIBLE", "EMAIL", "PHONE", ""]}>
           {filtered.map(function(p) {
             return (
-              <tr key={p.id} style={{ borderBottom: "1px solid #f0ede6" }}>
+              <tr key={p.id} onClick={function() { setFicheId(p.id); }} style={{ borderBottom: "1px solid #f0ede6", cursor: "pointer" }}
+                onMouseEnter={function(e) { e.currentTarget.style.background = "#f7f5f0"; }}
+                onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
                 <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500, color: "#2c2c2a" }}>{p.nom}</td>
                 <td style={{ padding: "10px 12px" }}><TypeBadge t={p.type} /></td>
                 <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.ville || p.district || "—"}</td>
@@ -347,6 +517,8 @@ function Partenaires() {
           <button onClick={handleUpdate} style={btnP}>Enregistrer</button>
         </div>
       </Modal>}
+
+      {ficheId && <FichePartenaire partenaire={data.find(function(p) { return p.id === ficheId; }) || {}} onClose={function() { setFicheId(null); }} />}
 
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau partenaire">
         <Field label="Type *">
@@ -794,6 +966,19 @@ var TABS = [
 
 export default function App() {
   var ts = useState("dashboard"); var tab = ts[0]; var setTab = ts[1];
+  var notifState = useState([]); var notifications = notifState[0]; var setNotifications = notifState[1];
+
+  useEffect(function() {
+    var today = new Date().toISOString().split("T")[0];
+    var tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
+    sbFetch("actions_partenaires", {
+      select: "*",
+      filter: "statut=eq.A+faire&date_prevue=lte." + tomorrow,
+      order: "date_prevue.asc"
+    }).then(function(rows) {
+      setNotifications(rows);
+    }).catch(function() {});
+  }, []);
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f7f5f0" }}>
       <div style={{ background: "#fff", borderBottom: "1px solid #e8e6de", padding: "0 24px" }}>
@@ -804,11 +989,19 @@ export default function App() {
             </div>
             <span style={{ fontWeight: 700, fontSize: 16, color: "#2c2c2a" }}>Cung Nhau CRM</span>
           </div>
-          <nav style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
+          {notifications.length > 0 && (
+            <div title={notifications.length + " action(s) à venir"} style={{ position: "relative", cursor: "pointer" }} onClick={function() { setTab("partenaires"); }}>
+              <span style={{ fontSize: 20 }}>🔔</span>
+              <span style={{ position: "absolute", top: -4, right: -4, background: "#E24B4A", color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{notifications.length}</span>
+            </div>
+          )}
+          <nav style={{ display: "flex", gap: 2 }}>
             {TABS.map(function(t) {
               return <button key={t.id} onClick={function() { setTab(t.id); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tab === t.id ? "#534AB722" : "transparent", color: tab === t.id ? "#534AB7" : "#666", cursor: "pointer", fontSize: 14, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</button>;
             })}
           </nav>
+          </div>
         </div>
       </div>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px" }}>
