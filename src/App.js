@@ -330,7 +330,7 @@ function Dashboard(props) {
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
         <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
       </div>
-      <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: ["general","evtMois","evtAnnee","part_ONG","part_Shelter","part_Ecole","part_Sponsor","coaches","retard","actions"].indexOf(dashView) >= 0 ? "flex" : "none", flexDirection: "column", gap: 20 }}>
 
         {/* ── ACTIVITÉS ── */}
         <SectionTitle>Activités</SectionTitle>
