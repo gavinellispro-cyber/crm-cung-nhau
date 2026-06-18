@@ -259,8 +259,6 @@ function Dashboard(props) {
         <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
       </div>
 
-      <div style={{ borderTop: "2px solid #e8e6de", paddingTop: 20, marginTop: 8 }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} onAdd={function() { setOpenTacheModal(true); setTab("taches"); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} />
       </div>
     </div>
   );
