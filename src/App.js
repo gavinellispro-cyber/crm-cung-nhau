@@ -239,7 +239,7 @@ function Dashboard(props) {
         <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#fff" : "transparent", color: dashView === "taches" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTab("taches"); setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
       </div>
       <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
       <SectionTitle>Activités</SectionTitle>
@@ -1538,15 +1538,21 @@ function Coaches() {
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
   var ficheState = useState(null); var ficheCoach = ficheState[0]; var setFicheCoach = ficheState[1];
-  var editCoachModalState = useState(false); var editCoachModal = editCoachModalState[0]; var setEditCoachModal = editCoachModalState[1];
-  var editCoachFormState = useState(null); var editCoachForm = editCoachFormState[0]; var setEditCoachForm = editCoachFormState[1];
+  var editModalState = useState(false); var editCoachModal = editModalState[0]; var setEditCoachModal = editModalState[1];
+  var editFormState = useState(null); var editCoachForm = editFormState[0]; var setEditCoachForm = editFormState[1];
   var uploadingState = useState(null); var uploadingId = uploadingState[0]; var setUploadingId = uploadingState[1];
-  var editCoachModalState = useState(false); var editCoachModal = editCoachModalState[0]; var setEditCoachModal = editCoachModalState[1];
-  var editCoachFormState = useState(null); var editCoachForm = editCoachFormState[0]; var setEditCoachForm = editCoachFormState[1];
+
+  // Recherche, filtres et tri
+  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
+  var fStatutState = useState("Tous"); var fStatut = fStatutState[0]; var setFStatut = fStatutState[1];
+  var fRoleState = useState("Tous"); var fRole = fRoleState[0]; var setFRole = fRoleState[1];
+  var fSportState = useState("Tous"); var fSport = fSportState[0]; var setFSport = fSportState[1];
+  var sortState = useState("sessions"); var sortBy = sortState[0]; var setSortBy = sortState[1];
 
   var EMPTY = { prenom: "", nom: "", email: "", telephone: "", sport_principal: "Rugby", role: "Benevole", statut: "Actif", pays: "", langues: "", background_check: "", sessions_programmees: 0, sessions_completees: 0 };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
+  function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
 
   useEffect(function() {
     sbFetch("coaches", { select: "*", order: "sessions_completees.desc" }).then(function(r) { setData(r); setLoading(false); });
@@ -1557,32 +1563,21 @@ function Coaches() {
   }
 
   function handleUpdateCoach() {
-    var payload = { prenom: editCoachForm.prenom, nom: editCoachForm.nom, email: editCoachForm.email, telephone: editCoachForm.telephone, pays: editCoachForm.pays, langues: editCoachForm.langues, sport_principal: editCoachForm.sport_principal, role: editCoachForm.role, statut: editCoachForm.statut, background_check: editCoachForm.background_check, sessions_programmees: Number(editCoachForm.sessions_programmees) || 0, sessions_completees: Number(editCoachForm.sessions_completees) || 0 };
-    sbUpdate("coaches", editCoachForm.id, payload).then(function() {
-      setData(data.map(function(c) { return c.id === editCoachForm.id ? Object.assign({}, c, payload) : c; }));
-      setFicheCoach(Object.assign({}, ficheCoach, payload));
-      setEditCoachModal(false);
-    }).catch(function(e) { alert(e.message); });
-  }
-  function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
-
-  function handleUpdateCoach() {
     var payload = {
       prenom: editCoachForm.prenom, nom: editCoachForm.nom,
       email: editCoachForm.email, telephone: editCoachForm.telephone,
       pays: editCoachForm.pays, langues: editCoachForm.langues,
       sport_principal: editCoachForm.sport_principal, role: editCoachForm.role,
       statut: editCoachForm.statut, background_check: editCoachForm.background_check,
-      sessions_programmees: editCoachForm.sessions_programmees || 0,
-      sessions_completees: editCoachForm.sessions_completees || 0,
+      sessions_programmees: Number(editCoachForm.sessions_programmees) || 0,
+      sessions_completees: Number(editCoachForm.sessions_completees) || 0,
     };
     sbUpdate("coaches", editCoachForm.id, payload).then(function() {
       setData(data.map(function(c) { return c.id === editCoachForm.id ? Object.assign({}, c, payload) : c; }));
-      setFicheCoach(Object.assign({}, ficheCoach, payload));
+      if (ficheCoach && ficheCoach.id === editCoachForm.id) setFicheCoach(Object.assign({}, ficheCoach, payload));
       setEditCoachModal(false);
     }).catch(function(e) { alert(e.message); });
   }
-  function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
 
   function handlePhotoUpload(coachId, file) {
     if (!file) return;
@@ -1590,42 +1585,107 @@ function Coaches() {
     var reader = new FileReader();
     reader.onload = function(ev) {
       var base64 = ev.target.result;
-      // Store as data URL in photo_url field
       sbUpdate("coaches", coachId, { photo_url: base64 }).then(function() {
         setData(data.map(function(c) { return c.id === coachId ? Object.assign({}, c, { photo_url: base64 }) : c; }));
         if (ficheCoach && ficheCoach.id === coachId) setFicheCoach(Object.assign({}, ficheCoach, { photo_url: base64 }));
         setUploadingId(null);
-      });
+      }).catch(function(e) { alert(e.message); setUploadingId(null); });
     };
     reader.readAsDataURL(file);
   }
 
-  // Sort by sessions_completees desc
-  var sorted = data.slice().sort(function(a, b) { return (Number(b.sessions_completees) || 0) - (Number(a.sessions_completees) || 0); });
+  // Taux de complétion plafonné à 100 %
+  function pctOf(c) {
+    var prog = Number(c.sessions_programmees) || 0;
+    var comp = Number(c.sessions_completees) || 0;
+    return prog > 0 ? Math.min(Math.round((comp / prog) * 100), 100) : 0;
+  }
+
+  // Background check structuré (compatible avec l'ancienne valeur "CONFIRMED")
+  var BG_OPTIONS = ["", "Confirmé", "En cours", "Non requis"];
+  var BG_COLORS = { "Confirmé": "#1D9E75", "CONFIRMED": "#1D9E75", "En cours": "#BA7517", "Non requis": "#888780" };
+  function bgColor(v) { return BG_COLORS[v] || "#BA7517"; }
+  function bgLabel(v) { return v === "CONFIRMED" ? "Confirmé" : v; }
+
+  // Statistiques d'en-tête
+  var totalSessions = data.reduce(function(s, c) { return s + (Number(c.sessions_completees) || 0); }, 0);
+  var actifs = data.filter(function(c) { return c.statut === "Actif"; }).length;
+  var avgTaux = data.length ? Math.round(data.reduce(function(s, c) { return s + pctOf(c); }, 0) / data.length) : 0;
+
+  // Filtrage + tri
+  var filtered = data.filter(function(c) {
+    var q = search.trim().toLowerCase();
+    var hay = ((c.prenom || "") + " " + (c.nom || "") + " " + (c.pays || "") + " " + (c.langues || "")).toLowerCase();
+    var matchSearch = !q || hay.indexOf(q) >= 0;
+    var matchStatut = fStatut === "Tous" || c.statut === fStatut;
+    var matchRole = fRole === "Tous" || c.role === fRole;
+    var matchSport = fSport === "Tous" || c.sport_principal === fSport;
+    return matchSearch && matchStatut && matchRole && matchSport;
+  });
+  var sorted = filtered.slice().sort(function(a, b) {
+    if (sortBy === "nom") return ((a.prenom || "") + (a.nom || "")).localeCompare((b.prenom || "") + (b.nom || ""));
+    if (sortBy === "taux") return pctOf(b) - pctOf(a);
+    if (sortBy === "statut") return (a.statut || "").localeCompare(b.statut || "");
+    return (Number(b.sessions_completees) || 0) - (Number(a.sessions_completees) || 0);
+  });
+  var showMedals = sortBy === "sessions" && fStatut === "Tous" && fRole === "Tous" && fSport === "Tous" && !search.trim();
+  var filtresActifs = fStatut !== "Tous" || fRole !== "Tous" || fSport !== "Tous" || search.trim();
+
+  var miniSel = { padding: "6px 8px", borderRadius: 8, border: "1px solid #ddd", fontSize: 13, background: "#fff" };
 
   if (loading) return <Spinner />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ fontSize: 13, color: "#888" }}>{data.length} coach{data.length > 1 ? "es" : ""} · classés par sessions</div>
-        <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
+      {/* Bandeau de statistiques */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
+        <KpiCard label="Coaches" value={data.length} color="#534AB7" />
+        <KpiCard label="Actifs" value={actifs} sub={data.length ? Math.round((actifs / data.length) * 100) + "% de l'effectif" : ""} color="#1D9E75" />
+        <KpiCard label="Sessions complétées" value={totalSessions} color="#185FA5" />
+        <KpiCard label="Taux moyen" value={avgTaux + "%"} color="#BA7517" />
       </div>
 
-      {data.length === 0 ? <Empty msg="Aucun coach" /> : (
+      {/* Barre recherche + filtres */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+        <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher (nom, pays, langue)..." style={{ flex: "1 1 220px", minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none" }} />
+        <select value={fStatut} onChange={function(e) { setFStatut(e.target.value); }} style={miniSel}>
+          {["Tous", "Actif", "Occasionnel", "Inactif"].map(function(s) { return <option key={s} value={s}>{s === "Tous" ? "Statut : tous" : s}</option>; })}
+        </select>
+        <select value={fRole} onChange={function(e) { setFRole(e.target.value); }} style={miniSel}>
+          {["Tous", "Coach principal", "Benevole", "Staff", "Coordinateur"].map(function(r) { return <option key={r} value={r}>{r === "Tous" ? "Rôle : tous" : r}</option>; })}
+        </select>
+        <select value={fSport} onChange={function(e) { setFSport(e.target.value); }} style={miniSel}>
+          {["Tous", "Rugby", "Football", "Atletisme", "Basketball", "Natation", "Autre"].map(function(s) { return <option key={s} value={s}>{s === "Tous" ? "Sport : tous" : s}</option>; })}
+        </select>
+        <select value={sortBy} onChange={function(e) { setSortBy(e.target.value); }} style={miniSel}>
+          <option value="sessions">Tri : sessions</option>
+          <option value="taux">Tri : taux</option>
+          <option value="nom">Tri : nom</option>
+          <option value="statut">Tri : statut</option>
+        </select>
+        {filtresActifs && <button onClick={function() { setSearch(""); setFStatut("Tous"); setFRole("Tous"); setFSport("Tous"); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13, color: "#888" }}>✕ Réinitialiser</button>}
+        <button onClick={function() { setModal(true); }} style={Object.assign({}, btnA, { marginLeft: "auto" })}>+ Ajouter</button>
+      </div>
+
+      <div style={{ fontSize: 13, color: "#888" }}>
+        {filtered.length === data.length ? (data.length + " coach" + (data.length > 1 ? "es" : "")) : (filtered.length + " / " + data.length + " coaches")}
+        {showMedals ? " · classés par sessions" : ""}
+      </div>
+
+      {data.length === 0 ? <Empty msg="Aucun coach" /> : sorted.length === 0 ? <Empty msg="Aucun coach ne correspond aux filtres" /> : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {sorted.map(function(c, idx) {
             var sessionsTotal = Number(c.sessions_completees) || 0;
             var sessionsProg = Number(c.sessions_programmees) || 0;
-            var pct = sessionsProg > 0 ? Math.round((sessionsTotal / sessionsProg) * 100) : 0;
-            var STATUT_C = { Actif: "#1D9E75", Inactif: "#888", Occasionnel: "#BA7517" };
-            var color = STATUT_C[c.statut] || "#888";
-            var medal = idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "";
+            var pct = pctOf(c);
+            var STATUT_C = { Actif: "#1D9E75", Inactif: "#888780", Occasionnel: "#BA7517" };
+            var color = STATUT_C[c.statut] || "#888780";
+            var medal = showMedals ? (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "") : "";
             return (
               <div key={c.id} onClick={function() { setFicheCoach(c); }} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
                 onMouseEnter={function(e) { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={function(e) { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
-                {/* Photo area */}
+                {/* Zone photo */}
                 <div style={{ position: "relative", height: 140, background: "linear-gradient(135deg, #534AB711, #185FA511)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {c.photo_url ? (
                     <img src={c.photo_url} alt={c.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1638,32 +1698,28 @@ function Coaches() {
                   <div style={{ position: "absolute", top: 8, right: 8 }}>
                     <span style={{ background: color + "22", color: color, padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{c.statut}</span>
                   </div>
-                  {/* Upload photo button */}
                   <label onClick={function(e) { e.stopPropagation(); }} style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.5)", color: "#fff", borderRadius: 20, padding: "3px 8px", fontSize: 11, cursor: "pointer" }}>
                     {uploadingId === c.id ? "..." : "📷"}
                     <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(c.id, e.target.files[0]); }} />
                   </label>
-                  <div style={{ position: "absolute", bottom: 8, left: 8, background: "rgba(0,0,0,0.5)", color: "#fff", borderRadius: 12, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>
-                    #{idx + 1}
-                  </div>
+                  {showMedals && <div style={{ position: "absolute", bottom: 8, left: 8, background: "rgba(0,0,0,0.5)", color: "#fff", borderRadius: 12, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>#{idx + 1}</div>}
                 </div>
-                {/* Info */}
+                {/* Infos */}
                 <div style={{ padding: "12px 14px" }}>
                   <div style={{ fontWeight: 700, fontSize: 15, color: "#2c2c2a" }}>{c.prenom} {c.nom}</div>
                   <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.role} · {c.pays || "—"}</div>
                   {c.langues && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{c.langues}</div>}
-                  {/* Sessions bar */}
                   <div style={{ marginTop: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}>
                       <span>Sessions</span>
                       <span style={{ fontWeight: 600, color: "#534AB7" }}>{sessionsTotal}/{sessionsProg}</span>
                     </div>
                     <div style={{ background: "#f0ede6", borderRadius: 4, height: 6 }}>
-                      <div style={{ background: "#534AB7", borderRadius: 4, height: 6, width: Math.min(pct, 100) + "%" }} />
+                      <div style={{ background: "#534AB7", borderRadius: 4, height: 6, width: pct + "%" }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#aaa", marginTop: 3, textAlign: "right" }}>{pct}% complété</div>
                   </div>
-                  {c.background_check && <div style={{ fontSize: 11, color: c.background_check === "CONFIRMED" ? "#1D9E75" : "#BA7517", marginTop: 6, fontWeight: 500 }}>✓ {c.background_check}</div>}
+                  {c.background_check && <div style={{ fontSize: 11, color: bgColor(c.background_check), marginTop: 6, fontWeight: 500 }}>✓ {bgLabel(c.background_check)}</div>}
                 </div>
               </div>
             );
@@ -1673,9 +1729,9 @@ function Coaches() {
 
       {/* FICHE COACH */}
       {ficheCoach && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
-          <div style={{ background: "#fff", width: "100%", maxWidth: 460, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}>
-            {/* Photo header */}
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }} onClick={function() { setFicheCoach(null); }}>
+          <div onClick={function(e) { e.stopPropagation(); }} style={{ background: "#fff", width: "100%", maxWidth: 460, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}>
+            {/* En-tête photo */}
             <div style={{ position: "relative", height: 200, background: "linear-gradient(135deg, #534AB722, #185FA522)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {ficheCoach.photo_url ? (
                 <img src={ficheCoach.photo_url} alt={ficheCoach.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -1686,13 +1742,12 @@ function Coaches() {
               )}
               <button onClick={function() { setFicheCoach(null); }} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: "50%", width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
               <button onClick={function() { setEditCoachForm(Object.assign({}, ficheCoach)); setEditCoachModal(true); }} style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>✏️ Modifier</button>
-              <button onClick={function() { setEditCoachForm(Object.assign({}, ficheCoach)); setEditCoachModal(true); }} style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>✏️ Modifier</button>
               <label style={{ position: "absolute", bottom: 12, right: 12, background: "#534AB7", color: "#fff", borderRadius: 20, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
                 📷 Changer la photo
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(ficheCoach.id, e.target.files[0]); }} />
               </label>
             </div>
-            {/* Info */}
+            {/* Infos */}
             <div style={{ padding: "20px 24px" }}>
               <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>{ficheCoach.prenom} {ficheCoach.nom}</h2>
               <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>{ficheCoach.role} · {ficheCoach.sport_principal}</div>
@@ -1727,22 +1782,22 @@ function Coaches() {
                     <div style={{ fontSize: 11, color: "#888" }}>Programmées</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#1D9E75" }}>{ficheCoach.sessions_programmees > 0 ? Math.round((ficheCoach.sessions_completees / ficheCoach.sessions_programmees) * 100) : 0}%</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#1D9E75" }}>{pctOf(ficheCoach)}%</div>
                     <div style={{ fontSize: 11, color: "#888" }}>Taux</div>
                   </div>
                 </div>
                 <div style={{ background: "#e8e6de", borderRadius: 6, height: 8 }}>
-                  <div style={{ background: "#534AB7", borderRadius: 6, height: 8, width: Math.min(ficheCoach.sessions_programmees > 0 ? Math.round((ficheCoach.sessions_completees / ficheCoach.sessions_programmees) * 100) : 0, 100) + "%" }} />
+                  <div style={{ background: "#534AB7", borderRadius: 6, height: 8, width: pctOf(ficheCoach) + "%" }} />
                 </div>
               </div>
-              {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>✓ Background check : {ficheCoach.background_check}</div>}
+              {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: bgColor(ficheCoach.background_check), fontWeight: 500 }}>✓ Background check : {bgLabel(ficheCoach.background_check)}</div>}
               <DocumentsSection entityType="coach" entityId={ficheCoach.id} />
             </div>
           </div>
         </div>
       )}
 
-      {/* EDIT COACH MODAL */}
+      {/* MODALE MODIFIER */}
       {editCoachForm && <Modal open={editCoachModal} onClose={function() { setEditCoachModal(false); }} title={"Modifier — " + (editCoachForm.prenom || "") + " " + (editCoachForm.nom || "")}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Prénom *"><input style={inp} value={editCoachForm.prenom || ""} onChange={function(e) { setCF("prenom", e.target.value); }} /></Field>
@@ -1759,22 +1814,27 @@ function Coaches() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Sport">
             <select style={sel} value={editCoachForm.sport_principal || "Rugby"} onChange={function(e) { setCF("sport_principal", e.target.value); }}>
-              {["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
+              {["Rugby", "Football", "Atletisme", "Basketball", "Natation", "Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
             </select>
           </Field>
           <Field label="Rôle">
             <select style={sel} value={editCoachForm.role || "Benevole"} onChange={function(e) { setCF("role", e.target.value); }}>
-              {["Coach principal","Benevole","Staff","Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
+              {["Coach principal", "Benevole", "Staff", "Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
             </select>
           </Field>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Statut">
             <select style={sel} value={editCoachForm.statut || "Actif"} onChange={function(e) { setCF("statut", e.target.value); }}>
-              {["Actif","Occasionnel","Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
+              {["Actif", "Occasionnel", "Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
             </select>
           </Field>
-          <Field label="Background check"><input style={inp} value={editCoachForm.background_check || ""} onChange={function(e) { setCF("background_check", e.target.value); }} /></Field>
+          <Field label="Background check">
+            <select style={sel} value={BG_OPTIONS.indexOf(editCoachForm.background_check) >= 0 ? editCoachForm.background_check : (editCoachForm.background_check === "CONFIRMED" ? "Confirmé" : "")} onChange={function(e) { setCF("background_check", e.target.value); }}>
+              <option value="">—</option>
+              {["Confirmé", "En cours", "Non requis"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Sessions programmées"><input type="number" style={inp} value={editCoachForm.sessions_programmees || 0} onChange={function(e) { setCF("sessions_programmees", e.target.value); }} /></Field>
@@ -1786,38 +1846,7 @@ function Coaches() {
         </div>
       </Modal>}
 
-      {editCoachForm && <Modal open={editCoachModal} onClose={function() { setEditCoachModal(false); }} title={"Modifier — " + (editCoachForm.prenom || "") + " " + (editCoachForm.nom || "")}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Prénom"><input style={inp} value={editCoachForm.prenom || ""} onChange={function(e) { setCF("prenom", e.target.value); }} /></Field>
-          <Field label="Nom"><input style={inp} value={editCoachForm.nom || ""} onChange={function(e) { setCF("nom", e.target.value); }} /></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Email"><input style={inp} type="email" value={editCoachForm.email || ""} onChange={function(e) { setCF("email", e.target.value); }} /></Field>
-          <Field label="Téléphone"><input style={inp} value={editCoachForm.telephone || ""} onChange={function(e) { setCF("telephone", e.target.value); }} /></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Pays"><input style={inp} value={editCoachForm.pays || ""} onChange={function(e) { setCF("pays", e.target.value); }} /></Field>
-          <Field label="Langues"><input style={inp} value={editCoachForm.langues || ""} onChange={function(e) { setCF("langues", e.target.value); }} /></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Sport"><select style={sel} value={editCoachForm.sport_principal || "Rugby"} onChange={function(e) { setCF("sport_principal", e.target.value); }}>{["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s){return <option key={s}>{s}</option>;})}</select></Field>
-          <Field label="Rôle"><select style={sel} value={editCoachForm.role || "Benevole"} onChange={function(e) { setCF("role", e.target.value); }}>{["Coach principal","Benevole","Staff","Coordinateur"].map(function(r){return <option key={r}>{r}</option>;})}</select></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Statut"><select style={sel} value={editCoachForm.statut || "Actif"} onChange={function(e) { setCF("statut", e.target.value); }}>{["Actif","Occasionnel","Inactif"].map(function(s){return <option key={s}>{s}</option>;})}</select></Field>
-          <Field label="Background check"><input style={inp} value={editCoachForm.background_check || ""} onChange={function(e) { setCF("background_check", e.target.value); }} /></Field>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Sessions programmées"><input type="number" style={inp} value={editCoachForm.sessions_programmees || 0} onChange={function(e) { setCF("sessions_programmees", e.target.value); }} /></Field>
-          <Field label="Sessions complétées"><input type="number" style={inp} value={editCoachForm.sessions_completees || 0} onChange={function(e) { setCF("sessions_completees", e.target.value); }} /></Field>
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={function() { setEditCoachModal(false); }} style={btnS}>Annuler</button>
-          <button onClick={handleUpdateCoach} style={btnP}>Enregistrer</button>
-        </div>
-      </Modal>}
-
-      {/* ADD MODAL */}
+      {/* MODALE AJOUTER */}
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau coach">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Prénom *"><input style={inp} value={form.prenom} onChange={function(e) { set("prenom", e.target.value); }} /></Field>
@@ -1832,12 +1861,25 @@ function Coaches() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Sport">
             <select style={sel} value={form.sport_principal} onChange={function(e) { set("sport_principal", e.target.value); }}>
-              {["Rugby","Football","Atletisme","Basketball","Natation","Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
+              {["Rugby", "Football", "Atletisme", "Basketball", "Natation", "Autre"].map(function(s) { return <option key={s}>{s}</option>; })}
             </select>
           </Field>
           <Field label="Rôle">
             <select style={sel} value={form.role} onChange={function(e) { set("role", e.target.value); }}>
-              {["Coach principal","Benevole","Staff","Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
+              {["Coach principal", "Benevole", "Staff", "Coordinateur"].map(function(r) { return <option key={r}>{r}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Statut">
+            <select style={sel} value={form.statut} onChange={function(e) { set("statut", e.target.value); }}>
+              {["Actif", "Occasionnel", "Inactif"].map(function(s) { return <option key={s}>{s}</option>; })}
+            </select>
+          </Field>
+          <Field label="Background check">
+            <select style={sel} value={form.background_check} onChange={function(e) { set("background_check", e.target.value); }}>
+              <option value="">—</option>
+              {["Confirmé", "En cours", "Non requis"].map(function(s) { return <option key={s}>{s}</option>; })}
             </select>
           </Field>
         </div>
@@ -2160,6 +2202,7 @@ var TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "partenaires", label: "Partenaires" },
   { id: "evenements", label: "Événements" },
+  { id: "taches", label: "Tâches" },
   { id: "coaches", label: "Coaches" },
 ];
 
@@ -2209,6 +2252,7 @@ export default function App() {
         {tab === "dashboard" && <Dashboard setTab={setTab} setOpenTacheModal={setOpenTacheModal} dashView={dashView} setDashView={setDashView} />}
         {tab === "partenaires" && <Partenaires />}
         {tab === "evenements" && <Evenements />}
+        {tab === "taches" && <Taches openModal={openTacheModal} setOpenModal={setOpenTacheModal} />}
         {tab === "coaches" && <Coaches />}
       </div>
     </div>
