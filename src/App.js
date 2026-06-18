@@ -129,31 +129,56 @@ var btnP = { padding: "8px 20px", borderRadius: 8, border: "none", background: "
 var btnS = { padding: "8px 16px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 14 };
 var btnA = { padding: "7px 16px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 };
 
-// ── MULTI-SELECT PARTENAIRES ───────────────────────────────────
+// ── MULTI-SELECT PARTENAIRES (accordéon) ─────────────────────
 function PartenaireMultiSelect(props) {
   var partenaires = props.partenaires;
   var selected = props.selected;
   var onChange = props.onChange;
   var type = props.type;
+  var openState = useState(false); var open = openState[0]; var setOpen = openState[1];
   var filtered = partenaires.filter(function(p) { return p.type === type; });
-  if (!filtered.length) return (
-    <div style={{ fontSize: 12, color: "#aaa", padding: "8px 0" }}>Aucun {type} actif — ajoutez-en dans l'onglet Partenaires</div>
-  );
+  var color = TYPE_COLOR[type] || "#888";
+  var nbSel = selected.length;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {filtered.map(function(p) {
-        var isSelected = selected.indexOf(p.id) !== -1;
-        return (
-          <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? TYPE_COLOR[type] : "#e0e0e0"), background: isSelected ? TYPE_COLOR[type] + "11" : "#fff", cursor: "pointer" }}>
-            <input type="checkbox" checked={isSelected} onChange={function() {
-              if (isSelected) { onChange(selected.filter(function(id) { return id !== p.id; })); }
-              else { onChange(selected.concat(p.id)); }
-            }} style={{ accentColor: TYPE_COLOR[type] }} />
-            <span style={{ fontSize: 13, fontWeight: isSelected ? 500 : 400 }}>{p.nom}</span>
-            {p.contact_nom && <span style={{ fontSize: 12, color: "#aaa", marginLeft: "auto" }}>{p.contact_nom}</span>}
-          </label>
-        );
-      })}
+    <div style={{ border: "1px solid " + (nbSel > 0 ? color : "#e0e0e0"), borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+      {/* Header cliquable */}
+      <div onClick={function() { setOpen(!open); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: nbSel > 0 ? color + "11" : "#fafafa", cursor: "pointer", userSelect: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14 }}>{TYPE_ICON[type]}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: nbSel > 0 ? color : "#444" }}>{type}</span>
+          {nbSel > 0 && <span style={{ background: color, color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{nbSel} sélectionné{nbSel > 1 ? "s" : ""}</span>}
+          {!filtered.length && <span style={{ fontSize: 11, color: "#aaa" }}>(aucun)</span>}
+        </div>
+        <span style={{ fontSize: 16, color: "#888", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+      </div>
+      {/* Liste déroulante */}
+      {open && (
+        <div style={{ borderTop: "1px solid #e0e0e0", background: "#fff" }}>
+          {!filtered.length ? (
+            <div style={{ padding: "10px 14px", fontSize: 12, color: "#aaa" }}>Aucun {type} — ajoutez-en dans l'onglet Partenaires</div>
+          ) : (
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              {filtered.map(function(p) {
+                var isSelected = selected.indexOf(p.id) !== -1;
+                return (
+                  <label key={p.id} onClick={function() {
+                    if (isSelected) onChange(selected.filter(function(id) { return id !== p.id; }));
+                    else onChange(selected.concat(p.id));
+                  }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", cursor: "pointer", background: isSelected ? color + "0d" : "transparent", borderBottom: "1px solid #f4f4f4" }}
+                    onMouseEnter={function(e) { if (!isSelected) e.currentTarget.style.background = "#f9f9f9"; }}
+                    onMouseLeave={function(e) { e.currentTarget.style.background = isSelected ? color + "0d" : "transparent"; }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid " + (isSelected ? color : "#ccc"), background: isSelected ? color : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                      {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? color : "#333", flex: 1 }}>{p.nom}</span>
+                    {p.contact_nom && <span style={{ fontSize: 11, color: "#aaa" }}>{p.contact_nom}</span>}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1816,14 +1841,9 @@ function Evenements() {
           </Field>
         </div>
         <div style={{ borderTop: "1px solid #e8e8e8", margin: "8px 0 14px" }} />
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 12 }}>Partenaires liés</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 10 }}>Partenaires liés</div>
         {[{type:"ONG",sel:selectedONG,setSel:setSelectedONG},{type:"Shelter",sel:selectedShelter,setSel:setSelectedShelter},{type:"Ecole",sel:selectedEcole,setSel:setSelectedEcole},{type:"Sponsor",sel:selectedSponsor,setSel:setSelectedSponsor}].map(function(item) {
-          return (
-            <div key={item.type} style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: TYPE_COLOR[item.type], marginBottom: 6 }}>{TYPE_ICON[item.type]} {item.type}{item.sel.length > 0 ? " (" + item.sel.length + " sélectionné" + (item.sel.length > 1 ? "s" : "") + ")" : ""}</div>
-              <PartenaireMultiSelect partenaires={partenaires} selected={item.sel} onChange={item.setSel} type={item.type} />
-            </div>
-          );
+          return <PartenaireMultiSelect key={item.type} partenaires={partenaires} selected={item.sel} onChange={item.setSel} type={item.type} />;
         })}
         <div style={{ borderTop: "1px solid #e8e8e8", margin: "8px 0 14px" }} />
         <div style={{ fontSize: 13, fontWeight: 600, color: "#C8102E", marginBottom: 8 }}>🏉 Coaches & bénévoles assignés{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
