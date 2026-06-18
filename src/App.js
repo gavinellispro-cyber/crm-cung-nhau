@@ -335,24 +335,50 @@ function Dashboard(props) {
         {/* ── ACTIVITÉS ── */}
         <SectionTitle>Activités</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-          {/* KPI Ce mois — cliquable */}
-          <div onClick={function() { setDashView("evtMois"); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
-            onMouseEnter={function(e) { e.currentTarget.style.boxShadow="0 4px 16px rgba(200,16,46,0.15)"; e.currentTarget.style.transform="translateY(-2px)"; }}
-            onMouseLeave={function(e) { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.transform="none"; }}>
-            <span style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Événements ce mois · {MOIS_FR[now.getMonth()]}</span>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtMois}</div>
-            <div style={{ fontSize: 11, color: "#C8102E", marginTop: 6, fontWeight: 500 }}>Voir le détail →</div>
+          {/* KPI Ce mois — toggle inline */}
+          <div onClick={function() { setDashView(dashView === "evtMois" ? "general" : "evtMois"); }} style={{ background: dashView === "evtMois" ? "#1a1a1a" : "#fff", border: "1px solid " + (dashView === "evtMois" ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+            <span style={{ fontSize: 11, color: dashView === "evtMois" ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>Événements ce mois · {MOIS_FR[now.getMonth()]}</span>
+            <div style={{ fontSize: 32, fontWeight: 700, color: dashView === "evtMois" ? "#fff" : "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtMois}</div>
+            <div style={{ fontSize: 11, color: dashView === "evtMois" ? "rgba(255,255,255,0.7)" : "#C8102E", marginTop: 6, fontWeight: 500 }}>{dashView === "evtMois" ? "▲ Masquer" : "▼ Voir le détail"}</div>
           </div>
-          {/* KPI Année — cliquable */}
-          <div onClick={function() { setDashView("evtAnnee"); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
-            onMouseEnter={function(e) { e.currentTarget.style.boxShadow="0 4px 16px rgba(200,16,46,0.15)"; e.currentTarget.style.transform="translateY(-2px)"; }}
-            onMouseLeave={function(e) { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.transform="none"; }}>
-            <span style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Cette année · {now.getFullYear()}</span>
-            <div style={{ fontSize: 32, fontWeight: 700, color: "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtAnnee}</div>
-            <div style={{ fontSize: 11, color: "#C8102E", marginTop: 6, fontWeight: 500 }}>Voir le détail →</div>
+          {/* KPI Année — toggle inline */}
+          <div onClick={function() { setDashView(dashView === "evtAnnee" ? "general" : "evtAnnee"); }} style={{ background: dashView === "evtAnnee" ? "#1a1a1a" : "#fff", border: "1px solid " + (dashView === "evtAnnee" ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+            <span style={{ fontSize: 11, color: dashView === "evtAnnee" ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>Cette année · {now.getFullYear()}</span>
+            <div style={{ fontSize: 32, fontWeight: 700, color: dashView === "evtAnnee" ? "#fff" : "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtAnnee}</div>
+            <div style={{ fontSize: 11, color: dashView === "evtAnnee" ? "rgba(255,255,255,0.7)" : "#C8102E", marginTop: 6, fontWeight: 500 }}>{dashView === "evtAnnee" ? "▲ Masquer" : "▼ Voir le détail"}</div>
           </div>
           <KpiCard label="Enfants touchés" value={enfants.toLocaleString()} color="#1D9E75" />
         </div>
+
+        {/* Détail événements du mois — inline sous les KPI */}
+        {dashView === "evtMois" && (
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>Événements de {MOIS_FR[now.getMonth()]} {now.getFullYear()}</span>
+              <span style={{ fontSize: 12, color: "#888" }}>{evtMois} événement{evtMois > 1 ? "s" : ""}</span>
+            </div>
+            <div style={{ padding: "12px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {evtMoisList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: "8px 0" }}>Aucun événement ce mois-ci</div> : evtMoisList.map(function(e) {
+                return <DashEvtCard key={e.id} e={e} onGo={function() {}} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Détail événements de l'année — inline sous les KPI */}
+        {dashView === "evtAnnee" && (
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>Événements {now.getFullYear()}</span>
+              <span style={{ fontSize: 12, color: "#888" }}>{evtAnnee} événement{evtAnnee > 1 ? "s" : ""}</span>
+            </div>
+            <div style={{ padding: "12px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {evtAnneeList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: "8px 0" }}>Aucun événement cette année</div> : evtAnneeList.map(function(e) {
+                return <DashEvtCard key={e.id} e={e} onGo={function() {}} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── PROCHAINS ÉVÉNEMENTS CONFIRMÉS ── */}
         <SectionTitle>Prochains événements confirmés</SectionTitle>
@@ -394,47 +420,167 @@ function Dashboard(props) {
         {/* ── PARTENAIRES ACTIFS ── */}
         <SectionTitle>Partenaires actifs</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-          <KpiCard label="🤝 ONG" value={byType("ONG")} color={TYPE_COLOR.ONG} />
-          <KpiCard label="🏠 Shelters" value={byType("Shelter")} color={TYPE_COLOR.Shelter} />
-          <KpiCard label="🏫 Écoles" value={byType("Ecole")} color={TYPE_COLOR.Ecole} />
-          <KpiCard label="💼 Sponsors" value={byType("Sponsor")} color={TYPE_COLOR.Sponsor} />
+          {[
+            { key: "ONG",     label: "🤝 ONG",      color: TYPE_COLOR.ONG },
+            { key: "Shelter", label: "🏠 Shelters",  color: TYPE_COLOR.Shelter },
+            { key: "Ecole",   label: "🏫 Écoles",    color: TYPE_COLOR.Ecole },
+            { key: "Sponsor", label: "💼 Sponsors",  color: TYPE_COLOR.Sponsor },
+          ].map(function(item) {
+            var active = dashView === "part_" + item.key;
+            var count = byType(item.key);
+            return (
+              <div key={item.key} onClick={function() { setDashView(active ? "general" : "part_" + item.key); }} style={{ background: active ? "#1a1a1a" : "#fff", border: "1px solid " + (active ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+                <span style={{ fontSize: 11, color: active ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>{item.label}</span>
+                <div style={{ fontSize: 28, fontWeight: 700, color: active ? "#fff" : item.color, lineHeight: 1.2, marginTop: 4 }}>{count}</div>
+                <div style={{ fontSize: 11, color: active ? "rgba(255,255,255,0.7)" : item.color, marginTop: 6, fontWeight: 500 }}>{active ? "▲ Masquer" : "▼ Voir la liste"}</div>
+              </div>
+            );
+          })}
         </div>
+
+        {/* Détail partenaires inline */}
+        {["ONG","Shelter","Ecole","Sponsor"].map(function(type) {
+          if (dashView !== "part_" + type) return null;
+          var list = data.partenaires.filter(function(p) { return p.type === type && p.statut === "Actif"; });
+          var tc = TYPE_COLOR[type];
+          return (
+            <div key={type} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{TYPE_ICON[type]} {type}s actifs</span>
+                <span style={{ fontSize: 12, color: "#888" }}>{list.length} partenaire{list.length > 1 ? "s" : ""}</span>
+              </div>
+              {list.length === 0 ? (
+                <div style={{ padding: "16px 18px", fontSize: 13, color: "#aaa" }}>Aucun {type} actif</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {list.map(function(p) {
+                    return (
+                      <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: "1px solid #f4f4f4" }}>
+                        <div style={{ width: 6, height: 6, borderRadius: "50%", background: tc, flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{p.nom}</div>
+                          {p.contact_nom && <div style={{ fontSize: 11, color: "#aaa" }}>{p.contact_nom}{p.ville ? " · " + p.ville : ""}</div>}
+                        </div>
+                        {p.contact_email && <div style={{ fontSize: 11, color: "#888", display: "none" }}>{p.contact_email}</div>}
+                        <Badge s={p.statut} />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
 
         {/* ── OPÉRATIONS ── */}
         <SectionTitle>Opérations</SectionTitle>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-          <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
-          <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
-          <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
+          {/* Coaches actifs */}
+          <div onClick={function() { setDashView(dashView === "coaches" ? "general" : "coaches"); }} style={{ background: dashView === "coaches" ? "#1a1a1a" : "#fff", border: "1px solid " + (dashView === "coaches" ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+            <span style={{ fontSize: 11, color: dashView === "coaches" ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>Coaches actifs</span>
+            <div style={{ fontSize: 28, fontWeight: 700, color: dashView === "coaches" ? "#fff" : "#1D9E75", lineHeight: 1.2, marginTop: 4 }}>{data.coaches.length}</div>
+            <div style={{ fontSize: 11, color: dashView === "coaches" ? "rgba(255,255,255,0.7)" : "#1D9E75", marginTop: 6, fontWeight: 500 }}>{dashView === "coaches" ? "▲ Masquer" : "▼ Voir la liste"}</div>
+          </div>
+          {/* Tâches en retard */}
+          <div onClick={function() { setDashView(dashView === "retard" ? "general" : "retard"); }} style={{ background: dashView === "retard" ? "#1a1a1a" : "#fff", border: "1px solid " + (dashView === "retard" ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+            <span style={{ fontSize: 11, color: dashView === "retard" ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>Tâches en retard</span>
+            <div style={{ fontSize: 28, fontWeight: 700, color: dashView === "retard" ? "#fff" : (tachesRetard > 0 ? "#A32D2D" : "#1D9E75"), lineHeight: 1.2, marginTop: 4 }}>{tachesRetard}</div>
+            <div style={{ fontSize: 11, color: dashView === "retard" ? "rgba(255,255,255,0.7)" : (tachesRetard > 0 ? "#A32D2D" : "#aaa"), marginTop: 6, fontWeight: 500 }}>{dashView === "retard" ? "▲ Masquer" : (tachesRetard > 0 ? "▼ Voir le détail" : "Aucune")}</div>
+          </div>
+          {/* Actions en attente */}
+          <div onClick={function() { setDashView(dashView === "actions" ? "general" : "actions"); }} style={{ background: dashView === "actions" ? "#1a1a1a" : "#fff", border: "1px solid " + (dashView === "actions" ? "#1a1a1a" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "all .15s" }}>
+            <span style={{ fontSize: 11, color: dashView === "actions" ? "rgba(255,255,255,0.6)" : "#888", textTransform: "uppercase", letterSpacing: 1 }}>⏳ Actions en attente</span>
+            <div style={{ fontSize: 28, fontWeight: 700, color: dashView === "actions" ? "#fff" : (actionsEnAttente > 0 ? "#BA7517" : "#888"), lineHeight: 1.2, marginTop: 4 }}>{actionsEnAttente}</div>
+            <div style={{ fontSize: 11, color: dashView === "actions" ? "rgba(255,255,255,0.7)" : (actionsEnAttente > 0 ? "#BA7517" : "#aaa"), marginTop: 6, fontWeight: 500 }}>{dashView === "actions" ? "▲ Masquer" : (actionsEnAttente > 0 ? "▼ Voir le détail" : "à relancer")}</div>
+          </div>
         </div>
+
+        {/* Détail coaches inline */}
+        {dashView === "coaches" && (
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>🏉 Coaches actifs</span>
+              <span style={{ fontSize: 12, color: "#888" }}>{data.coaches.length} coach{data.coaches.length > 1 ? "es" : ""}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {data.coaches.map(function(c) {
+                return (
+                  <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: "1px solid #f4f4f4" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#1D9E7522", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#1D9E75", flexShrink: 0 }}>
+                      {(c.prenom||"?")[0]}{(c.nom||"")[0]}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{c.prenom} {c.nom}</div>
+                      <div style={{ fontSize: 11, color: "#aaa" }}>{c.role}{c.pays ? " · " + c.pays : ""}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "#888" }}>{c.sessions_completees || 0} sessions</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Détail tâches en retard inline */}
+        {dashView === "retard" && (
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#A32D2D" }}>⚠️ Tâches en retard</span>
+              <span style={{ fontSize: 12, color: "#888" }}>{tachesRetard} tâche{tachesRetard > 1 ? "s" : ""}</span>
+            </div>
+            {tachesRetard === 0 ? (
+              <div style={{ padding: "16px 18px", fontSize: 13, color: "#aaa" }}>Aucune tâche en retard 🎉</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {data.taches.filter(function(t) { return t.statut !== "Termine" && t.date_echeance && t.date_echeance < now.toISOString().split("T")[0]; }).map(function(t) {
+                  var retardDays = Math.ceil((now - new Date(t.date_echeance)) / 86400000);
+                  return (
+                    <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: "1px solid #f4f4f4" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#A32D2D", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{t.titre}</div>
+                        <div style={{ fontSize: 11, color: "#aaa" }}>Échéance : {t.date_echeance}{t.assigne_a ? " · " + t.assigne_a : ""}</div>
+                      </div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#A32D2D", background: "#A32D2D11", padding: "2px 8px", borderRadius: 20, whiteSpace: "nowrap" }}>+{retardDays}j</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Détail actions en attente inline */}
+        {dashView === "actions" && (
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ padding: "14px 18px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#BA7517" }}>⏳ Actions en attente</span>
+              <span style={{ fontSize: 12, color: "#888" }}>{actionsEnAttente} action{actionsEnAttente > 1 ? "s" : ""}</span>
+            </div>
+            {actionsEnAttente === 0 ? (
+              <div style={{ padding: "16px 18px", fontSize: 13, color: "#aaa" }}>Aucune action en attente</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {(data.actions || []).map(function(a) {
+                  var p = data.partenaires.find(function(x) { return x.id === a.partenaire_id; });
+                  var isLate = a.date_prevue < now.toISOString().split("T")[0];
+                  return (
+                    <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: "1px solid #f4f4f4" }}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: isLate ? "#A32D2D" : "#BA7517", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>{a.titre}</div>
+                        <div style={{ fontSize: 11, color: "#aaa" }}>{p ? p.nom + " · " : ""}{a.date_prevue}</div>
+                      </div>
+                      {isLate && <span style={{ fontSize: 11, fontWeight: 700, color: "#A32D2D", background: "#A32D2D11", padding: "2px 8px", borderRadius: 20 }}>En retard</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
-
-      {/* ── VUE ÉVÉNEMENTS DU MOIS ── */}
-      {dashView === "evtMois" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={function() { setDashView("general"); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>← Retour</button>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>Événements de {MOIS_FR[now.getMonth()]} {now.getFullYear()} <span style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>({evtMois})</span></h3>
-          </div>
-          {evtMoisList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: 20 }}>Aucun événement ce mois-ci</div> : evtMoisList.map(function(e) {
-            return <DashEvtCard key={e.id} e={e} onGo={function() { setTab("evenements"); }} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
-          })}
-        </div>
-      )}
-
-      {/* ── VUE ÉVÉNEMENTS DE L'ANNÉE ── */}
-      {dashView === "evtAnnee" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <button onClick={function() { setDashView("general"); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>← Retour</button>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>Événements {now.getFullYear()} <span style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>({evtAnnee})</span></h3>
-          </div>
-          {evtAnneeList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: 20 }}>Aucun événement cette année</div> : evtAnneeList.map(function(e) {
-            return <DashEvtCard key={e.id} e={e} onGo={function() { setTab("evenements"); }} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
-          })}
-        </div>
-      )}
 
       {/* MODAL NOUVELLE TÂCHE — géré dans le Dashboard */}
       <Modal open={tacheModal} onClose={function() { setTacheModal(false); setTacheForm(TEMPTY); setPartSearch(""); }} title="Nouvelle tâche">
