@@ -3123,92 +3123,88 @@ function TachesWidget(props) {
 
   var PRIORITE_ACTION = { "Visite terrain": "Haute", "RDV": "Haute", "Appel": "Moyenne", "Email": "Moyenne", "Autre": "Basse" };
 
-  // Convert actions partenaires to task-like objects
   var actionsTasks = actions.map(function(a) {
     var part = partenaires.find(function(p) { return p.id === a.partenaire_id; });
-    return {
-      id: "action_" + a.id,
-      _isAction: true,
-      _originalId: a.id,
-      titre: a.type + " — " + (part ? part.nom : "Partenaire"),
-      description: a.titre,
-      priorite: PRIORITE_ACTION[a.type] || "Moyenne",
-      date_echeance: a.date_prevue,
-      partenaire_id: a.partenaire_id,
-      _partNom: part ? part.nom : "",
-      statut: "A faire",
-    };
+    return { id: "action_" + a.id, _isAction: true, _originalId: a.id, titre: a.type + " — " + (part ? part.nom : "Partenaire"), description: a.titre, priorite: PRIORITE_ACTION[a.type] || "Moyenne", date_echeance: a.date_prevue, partenaire_id: a.partenaire_id, _partNom: part ? part.nom : "", statut: "A faire" };
   });
 
-  // Convert event tasks to task-like objects
   var evtTasks = tachesEvt.map(function(t) {
     var evt = evenements.find(function(e) { return e.id === t.evenement_id; });
-    return {
-      id: "evttask_" + t.id,
-      _isEvtTask: true,
-      _originalId: t.id,
-      titre: t.titre,
-      description: evt ? ("📅 " + evt.titre) : "",
-      priorite: t.priorite || "Moyenne",
-      date_echeance: t.date_echeance || (evt ? evt.date_debut ? evt.date_debut.split("T")[0] : null : null),
-      _evtNom: evt ? evt.titre : "",
-      statut: t.statut,
-    };
+    return { id: "evttask_" + t.id, _isEvtTask: true, _originalId: t.id, titre: t.titre, description: evt ? ("📅 " + evt.titre) : "", priorite: t.priorite || "Moyenne", date_echeance: t.date_echeance || (evt && evt.date_debut ? evt.date_debut.split("T")[0] : null), _evtNom: evt ? evt.titre : "", statut: t.statut };
   });
 
   var allItems = taches.concat(actionsTasks).concat(evtTasks);
-
-  var sorted = allItems.slice().sort(function(a, b) {
-    // Date d'abord, puis priorité
-    var hasA = !!a.date_echeance; var hasB = !!b.date_echeance;
-    if (hasA && hasB) {
-      if (a.date_echeance !== b.date_echeance) return a.date_echeance > b.date_echeance ? 1 : -1;
-    } else if (hasA) return -1;
-    else if (hasB) return 1;
-    // Même date ou pas de date : trier par priorité
-    var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
-    var pa = pOrder[a.priorite] !== undefined ? pOrder[a.priorite] : 4;
-    var pb = pOrder[b.priorite] !== undefined ? pOrder[b.priorite] : 4;
-    return pa - pb;
-  });
-
   var today = new Date().toISOString().split("T")[0];
+
+  function sortItems(list) {
+    return list.slice().sort(function(a, b) {
+      var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
+      var isLateA = a.date_echeance && a.date_echeance < today;
+      var isLateB = b.date_echeance && b.date_echeance < today;
+      if (isLateA && !isLateB) return -1;
+      if (!isLateA && isLateB) return 1;
+      if (a.date_echeance && b.date_echeance && a.date_echeance !== b.date_echeance) return a.date_echeance > b.date_echeance ? 1 : -1;
+      var pa = pOrder[a.priorite] !== undefined ? pOrder[a.priorite] : 4;
+      var pb = pOrder[b.priorite] !== undefined ? pOrder[b.priorite] : 4;
+      return pa - pb;
+    });
+  }
+
+  var cols = [
+    { label: "🔴 Urgente & Haute", color: "#A32D2D", bg: "#A32D2D11", border: "#A32D2D33", items: sortItems(allItems.filter(function(t) { return t.priorite === "Urgente" || t.priorite === "Haute"; })) },
+    { label: "🔵 Moyenne",         color: "#185FA5", bg: "#185FA511", border: "#185FA533", items: sortItems(allItems.filter(function(t) { return t.priorite === "Moyenne"; })) },
+    { label: "⚪ Basse",            color: "#888",    bg: "#88888811", border: "#88888833", items: sortItems(allItems.filter(function(t) { return t.priorite === "Basse" || !t.priorite; })) },
+  ];
+
+  function TaskCard(p2) {
+    var t = p2.t;
+    var cfg = PRIORITE_CONFIG[t.priorite] || PRIORITE_CONFIG.Moyenne;
+    var isLate = t.date_echeance && t.date_echeance < today;
+    var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
+    return (
+      <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e8e8"), borderLeft: "3px solid " + cfg.color, borderRadius: 8, padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start" }}>
+        <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2 }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3, wordBreak: "break-word" }}>{t.titre}</div>
+          {t.description && <div style={{ fontSize: 11, color: "#888", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</div>}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
+            {t.date_echeance && <span style={{ fontSize: 11, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}{isLate ? " ⚠️" : ""}</span>}
+            {t.assigne_a && <span style={{ fontSize: 11, color: "#C8102E", fontWeight: 500 }}>→ {t.assigne_a}</span>}
+            {(part || t._partNom || t.partenaire_nom_temp) && <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
+            {t._isAction && <span style={{ fontSize: 10, background: "#BA751722", color: "#BA7517", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>Action partenaire</span>}
+            {t._isEvtTask && <span style={{ fontSize: 10, background: "#9B1C1C22", color: "#9B1C1C", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1a1a1a" }}>
           📋 Tâches à traiter
-          {sorted.length > 0 && <span style={{ marginLeft: 8, background: "rgba(200,16,46,0.15)", color: "#C8102E", borderRadius: 20, padding: "2px 8px", fontSize: 12 }}>{sorted.length}</span>}
+          {allItems.length > 0 && <span style={{ marginLeft: 8, background: "rgba(200,16,46,0.15)", color: "#C8102E", borderRadius: 20, padding: "2px 8px", fontSize: 12 }}>{allItems.length}</span>}
         </h3>
         <button onClick={onAdd} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Nouvelle tâche</button>
       </div>
-      {sorted.length === 0 ? (
+
+      {allItems.length === 0 ? (
         <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: 13, background: "#f4f4f4", borderRadius: 10 }}>Aucune tâche en cours 🎉</div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {sorted.map(function(t) {
-            var cfg = PRIORITE_CONFIG[t.priorite] || PRIORITE_CONFIG.Moyenne;
-            var isLate = t.date_echeance && t.date_echeance < today;
-            var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, alignItems: "start" }}>
+          {cols.map(function(col) {
             return (
-              <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e0e0e0"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{cfg.icon} {t.titre}</span>
-                    <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{t.priorite}</span>
-                    {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
-                  </div>
-                  {(t.description || t._isAction) && <div style={{ fontSize: 13, color: "#444", marginTop: 3 }}>{t._isAction ? t.description : t.description}</div>}
-                  <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
-                    {t.date_echeance && <span style={{ fontSize: 12, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}</span>}
-                    {t.assigne_a && <span style={{ fontSize: 12, color: "#C8102E", fontWeight: 500 }}>→ {t.assigne_a}</span>}
-                    {t.assigne_par && <span style={{ fontSize: 12, color: "#888" }}>de {t.assigne_par}</span>}
-                    {(part || t.partenaire_nom_temp || t._partNom) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
-                    {t._isAction && <span style={{ fontSize: 11, background: "#BA751722", color: "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⏳ Action partenaire</span>}
-                    {t._isEvtTask && <span style={{ fontSize: 11, background: "#9B1C1C22", color: "#9B1C1C", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
-                  </div>
+              <div key={col.label} style={{ background: col.bg, border: "1px solid " + col.border, borderRadius: 10, overflow: "hidden" }}>
+                <div style={{ padding: "8px 12px", borderBottom: "1px solid " + col.border, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: col.color }}>{col.label}</span>
+                  <span style={{ fontSize: 11, color: col.color, background: col.bg, border: "1px solid " + col.border, borderRadius: 20, padding: "1px 7px", fontWeight: 700 }}>{col.items.length}</span>
+                </div>
+                <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {col.items.length === 0
+                    ? <div style={{ fontSize: 12, color: "#ccc", textAlign: "center", padding: "10px 0" }}>—</div>
+                    : col.items.map(function(t) { return <TaskCard key={t.id} t={t} />; })
+                  }
                 </div>
               </div>
             );
