@@ -789,7 +789,7 @@ function FichePartenaire(props) {
           </div>
         </Modal>
       </div>
-      </div>}
+      </div>
     </div>
   );
 }
