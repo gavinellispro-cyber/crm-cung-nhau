@@ -50,12 +50,12 @@ async function sbUpdate(table, id, data) {
 
 const vnd = function(n) { return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(n || 0); };
 
-const TYPE_COLOR = { ONG: "#1D9E75", Shelter: "#185FA5", Ecole: "#BA7517", Sponsor: "#534AB7" };
+const TYPE_COLOR = { ONG: "#1D9E75", Shelter: "#9B1C1C", Ecole: "#BA7517", Sponsor: "#C8102E" };
 const TYPE_ICON = { ONG: "🤝", Shelter: "🏠", Ecole: "🏫", Sponsor: "💼" };
 const STATUT_COLOR = {
   Actif: "#1D9E75", "A relancer": "#BA7517", Inactif: "#888780", Prospect: "#378ADD",
-  Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D",
-  "A faire": "#888780", Urgente: "#A32D2D", Haute: "#BA7517", Moyenne: "#534AB7",
+  Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D",
+  "A faire": "#888780", Urgente: "#A32D2D", Haute: "#BA7517", Moyenne: "#C8102E",
   Basse: "#888780", Occasionnel: "#BA7517", "En pause": "#888780",
 };
 
@@ -71,9 +71,9 @@ function TypeBadge(props) {
 
 function KpiCard(props) {
   return (
-    <div style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 4 }}>
+    <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>{props.label}</span>
-      <span style={{ fontSize: 22, fontWeight: 700, color: props.color || "#534AB7", lineHeight: 1.2 }}>{props.value}</span>
+      <span style={{ fontSize: 22, fontWeight: 700, color: props.color || "#C8102E", lineHeight: 1.2 }}>{props.value}</span>
       {props.sub && <span style={{ fontSize: 12, color: "#aaa" }}>{props.sub}</span>}
     </div>
   );
@@ -88,10 +88,10 @@ function Empty(props) { return <div style={{ textAlign: "center", padding: 40, c
 
 function TableUI(props) {
   return (
-    <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #e8e6de", background: "#fff" }}>
+    <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #e0e0e0", background: "#fff" }}>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead><tr style={{ background: "#f7f5f0" }}>
-          {props.headers.map(function(h) { return <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 500, color: "#888", textAlign: "left", borderBottom: "1px solid #e8e6de" }}>{h}</th>; })}
+        <thead><tr style={{ background: "#f4f4f4" }}>
+          {props.headers.map(function(h) { return <th key={h} style={{ padding: "10px 12px", fontSize: 12, fontWeight: 500, color: "#888", textAlign: "left", borderBottom: "1px solid #e0e0e0" }}>{h}</th>; })}
         </tr></thead>
         <tbody>{props.children}</tbody>
       </table>
@@ -103,7 +103,7 @@ function Modal(props) {
   if (!props.open) return null;
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 540, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: "100%", maxWidth: 540, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.35)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>{props.title}</h2>
           <button onClick={props.onClose} style={{ background: "none", border: "none", fontSize: 22, cursor: "pointer", color: "#aaa" }}>×</button>
@@ -117,17 +117,17 @@ function Modal(props) {
 function Field(props) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 14 }}>
-      <label style={{ fontSize: 12, fontWeight: 500, color: "#666" }}>{props.label}</label>
+      <label style={{ fontSize: 12, fontWeight: 500, color: "#444" }}>{props.label}</label>
       {props.children}
     </div>
   );
 }
 
-var inp = { padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" };
-var sel = { padding: "8px 10px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, background: "#fff", width: "100%", boxSizing: "border-box" };
-var btnP = { padding: "8px 20px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 500 };
-var btnS = { padding: "8px 16px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 14 };
-var btnA = { padding: "7px 16px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 };
+var inp = { padding: "8px 10px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" };
+var sel = { padding: "8px 10px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 14, background: "#fff", width: "100%", boxSizing: "border-box" };
+var btnP = { padding: "8px 20px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 500 };
+var btnS = { padding: "8px 16px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 14 };
+var btnA = { padding: "7px 16px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 };
 
 // ── MULTI-SELECT PARTENAIRES ───────────────────────────────────
 function PartenaireMultiSelect(props) {
@@ -144,7 +144,7 @@ function PartenaireMultiSelect(props) {
       {filtered.map(function(p) {
         var isSelected = selected.indexOf(p.id) !== -1;
         return (
-          <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? TYPE_COLOR[type] : "#e8e6de"), background: isSelected ? TYPE_COLOR[type] + "11" : "#fff", cursor: "pointer" }}>
+          <label key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? TYPE_COLOR[type] : "#e0e0e0"), background: isSelected ? TYPE_COLOR[type] + "11" : "#fff", cursor: "pointer" }}>
             <input type="checkbox" checked={isSelected} onChange={function() {
               if (isSelected) { onChange(selected.filter(function(id) { return id !== p.id; })); }
               else { onChange(selected.concat(p.id)); }
@@ -250,9 +250,9 @@ function Dashboard(props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", gap: 4, background: "#f0ede6", borderRadius: 10, padding: 4, alignSelf: "flex-start" }}>
-        <button onClick={function() { setDashView("general"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "general" ? "#fff" : "transparent", color: dashView === "general" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "general" ? 600 : 400 }}>📊 Vue générale</button>
-        <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#fff" : "transparent", color: dashView === "taches" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
+      <div style={{ display: "flex", gap: 4, background: "#2a2a2a", borderRadius: 10, padding: 4, alignSelf: "flex-start" }}>
+        <button onClick={function() { setDashView("general"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "general" ? "#C8102E" : "transparent", color: dashView === "general" ? "#fff" : "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 14, fontWeight: dashView === "general" ? 600 : 400 }}>📊 Vue générale</button>
+        <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#C8102E" : "transparent", color: dashView === "taches" ? "#fff" : "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
         <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
@@ -260,8 +260,8 @@ function Dashboard(props) {
       <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
       <SectionTitle>Activités</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        <KpiCard label="Événements ce mois" value={evtMois} color="#534AB7" />
-        <KpiCard label="Cette année" value={evtAnnee} color="#534AB7" />
+        <KpiCard label="Événements ce mois" value={evtMois} color="#C8102E" />
+        <KpiCard label="Cette année" value={evtAnnee} color="#C8102E" />
         <KpiCard label="Enfants touchés" value={enfants.toLocaleString()} color="#1D9E75" />
       </div>
       <SectionTitle>Partenaires actifs</SectionTitle>
@@ -270,13 +270,6 @@ function Dashboard(props) {
         <KpiCard label="🏠 Shelters" value={byType("Shelter")} color={TYPE_COLOR.Shelter} />
         <KpiCard label="🏫 Écoles" value={byType("Ecole")} color={TYPE_COLOR.Ecole} />
         <KpiCard label="💼 Sponsors" value={byType("Sponsor")} color={TYPE_COLOR.Sponsor} />
-      </div>
-      <SectionTitle>Finances</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-        <KpiCard label="Revenus du mois" value={vnd(revMois)} color="#1D9E75" />
-        <KpiCard label="Dépenses du mois" value={vnd(depMois)} color="#993C1D" />
-        <KpiCard label="Solde" value={vnd(revMois - depMois)} color={revMois - depMois >= 0 ? "#1D9E75" : "#A32D2D"} />
-        <KpiCard label="Valeur sponsors" value={vnd(valeur)} color="#534AB7" />
       </div>
       <SectionTitle>Opérations</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
@@ -320,10 +313,10 @@ function Dashboard(props) {
             <input style={inp} value={partSearch} placeholder="Tapez les premières lettres..." onChange={function(e) { setPartSearch(e.target.value); tset("partenaire_id", ""); tset("partenaire_nom_temp", ""); setShowDrop(true); }} onFocus={function() { setShowDrop(true); }} />
             {tacheForm.partenaire_id && <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }} onClick={function() { tset("partenaire_id", ""); setPartSearch(""); }}>×</div>}
             {showDrop && partSearch.length >= 2 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e8e6de", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 180, overflowY: "auto" }}>
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 180, overflowY: "auto" }}>
                 {filteredParts.length === 0
                   ? <div style={{ padding: "10px 14px", fontSize: 13, color: "#888" }}>Aucun résultat pour "{partSearch}"</div>
-                  : filteredParts.map(function(p) { return <div key={p.id} onClick={function() { tset("partenaire_id", p.id); setPartSearch(p.nom); setShowDrop(false); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: 14, borderBottom: "1px solid #f0ede6" }} onMouseEnter={function(e){e.currentTarget.style.background="#f7f5f0";}} onMouseLeave={function(e){e.currentTarget.style.background="";}}>
+                  : filteredParts.map(function(p) { return <div key={p.id} onClick={function() { tset("partenaire_id", p.id); setPartSearch(p.nom); setShowDrop(false); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: 14, borderBottom: "1px solid #e8e8e8" }} onMouseEnter={function(e){e.currentTarget.style.background="#f4f4f4";}} onMouseLeave={function(e){e.currentTarget.style.background="";}}>
                       {p.nom} <span style={{ fontSize: 11, color: "#aaa" }}>{p.type}</span>
                     </div>; })}
               </div>
@@ -429,7 +422,7 @@ function DocumentsSection(props) {
   return (
     <div style={{ marginTop: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📁 Documents</h3>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>📁 Documents</h3>
         <label style={Object.assign({}, btnA, { display: "inline-block", cursor: "pointer" })}>
           {uploading ? "Upload..." : "+ Ajouter"}
           <input type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls,.doc,.docx" style={{ display: "none" }} onChange={function(e) { handleUpload(e.target.files); }} />
@@ -440,15 +433,15 @@ function DocumentsSection(props) {
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
         {dossiers.map(function(d) {
           return (
-            <button key={d} onClick={function() { setDossier(d); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid " + (dossier === d ? "#534AB7" : "#ddd"), background: dossier === d ? "#534AB7" : "#fff", color: dossier === d ? "#fff" : "#555", cursor: "pointer", fontSize: 12, fontWeight: dossier === d ? 600 : 400 }}>
+            <button key={d} onClick={function() { setDossier(d); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid " + (dossier === d ? "#C8102E" : "#ddd"), background: dossier === d ? "#C8102E" : "#fff", color: dossier === d ? "#fff" : "#555", cursor: "pointer", fontSize: 12, fontWeight: dossier === d ? 600 : 400 }}>
               📁 {d}
             </button>
           );
         })}
         {newDossier ? (
           <div style={{ display: "flex", gap: 4 }}>
-            <input autoFocus value={newDossierName} onChange={function(e) { setNewDossierName(e.target.value); }} placeholder="Nom du dossier" style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 12, width: 120 }} onKeyDown={function(e) { if (e.key === "Enter" && newDossierName.trim()) { setDossier(newDossierName.trim()); setNewDossier(false); setNewDossierName(""); } }} />
-            <button onClick={function() { if (newDossierName.trim()) { setDossier(newDossierName.trim()); } setNewDossier(false); setNewDossierName(""); }} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
+            <input autoFocus value={newDossierName} onChange={function(e) { setNewDossierName(e.target.value); }} placeholder="Nom du dossier" style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #d0d0d0", fontSize: 12, width: 120 }} onKeyDown={function(e) { if (e.key === "Enter" && newDossierName.trim()) { setDossier(newDossierName.trim()); setNewDossier(false); setNewDossierName(""); } }} />
+            <button onClick={function() { if (newDossierName.trim()) { setDossier(newDossierName.trim()); } setNewDossier(false); setNewDossierName(""); }} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
           </div>
         ) : (
           <button onClick={function() { setNewDossier(true); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px dashed #ddd", background: "#fff", color: "#aaa", cursor: "pointer", fontSize: 12 }}>+ Nouveau dossier</button>
@@ -457,9 +450,9 @@ function DocumentsSection(props) {
 
       {/* Files list */}
       {loading ? <Spinner /> : filteredDocs.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "24px", color: "#bbb", fontSize: 13, border: "2px dashed #e8e6de", borderRadius: 10 }}>
+        <div style={{ textAlign: "center", padding: "24px", color: "#bbb", fontSize: 13, border: "2px dashed #e0e0e0", borderRadius: 10 }}>
           Aucun document dans ce dossier<br />
-          <label style={{ color: "#534AB7", cursor: "pointer", fontWeight: 500 }}>
+          <label style={{ color: "#C8102E", cursor: "pointer", fontWeight: 500 }}>
             Cliquez pour uploader
             <input type="file" accept=".pdf,.jpg,.jpeg,.png,.csv,.xlsx,.xls,.doc,.docx" style={{ display: "none" }} onChange={function(e) { handleUpload(e.target.files); }} />
           </label>
@@ -468,13 +461,13 @@ function DocumentsSection(props) {
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           {filteredDocs.map(function(doc) {
             return (
-              <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f7f5f0", borderRadius: 8, padding: "8px 12px" }}>
+              <div key={doc.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#f4f4f4", borderRadius: 8, padding: "8px 12px" }}>
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{getIcon(doc.nom)}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "#2c2c2a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.nom}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.nom}</div>
                   <div style={{ fontSize: 11, color: "#aaa" }}>{formatSize(doc.taille)} · {doc.created_at ? doc.created_at.split("T")[0] : ""}</div>
                 </div>
-                <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", color: "#534AB7", fontSize: 12, textDecoration: "none", flexShrink: 0 }}>⬇️</a>
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", color: "#C8102E", fontSize: 12, textDecoration: "none", flexShrink: 0 }}>⬇️</a>
                 <button onClick={function() { handleDelete(doc); }} style={{ padding: "4px 8px", borderRadius: 6, border: "none", background: "transparent", color: "#E24B4A", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>🗑️</button>
               </div>
             );
@@ -586,13 +579,13 @@ function FichePartenaire(props) {
     };
     var cfg = STATUT_CFG[a.statut] || STATUT_CFG["En attente"];
     return (
-      <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
+      <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e0e0e0"), borderRadius: 10, padding: "12px 14px", marginBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
           <div style={{ flexShrink: 0, marginTop: 2, fontSize: 20 }}>{cfg.icon}</div>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: a.statut === "Confirme" ? "#aaa" : "#2c2c2a", textDecoration: a.statut === "Confirme" ? "line-through" : "none" }}>{TYPE_ACTION_ICON[a.type]} {a.titre}</span>
-              <span style={{ fontSize: 11, background: "#f0ede6", color: "#888", borderRadius: 12, padding: "2px 8px" }}>{a.type}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: a.statut === "Confirme" ? "#aaa" : "#1a1a1a", textDecoration: a.statut === "Confirme" ? "line-through" : "none" }}>{TYPE_ACTION_ICON[a.type]} {a.titre}</span>
+              <span style={{ fontSize: 11, background: "#e8e8e8", color: "#888", borderRadius: 12, padding: "2px 8px" }}>{a.type}</span>
               {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
             </div>
             <div style={{ fontSize: 12, color: "#999", marginTop: 3 }}>📅 {a.date_prevue}{a.heure ? " à " + a.heure : ""}</div>
@@ -600,21 +593,21 @@ function FichePartenaire(props) {
             <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
               <button onClick={function() { changeStatut(a, "Confirme"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "Confirme" ? "#1D9E75" : "#ddd"), background: a.statut === "Confirme" ? "#1D9E7522" : "#fff", color: a.statut === "Confirme" ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "Confirme" ? 600 : 400 }}>✅ Confirmé</button>
               <button onClick={function() { changeStatut(a, "En attente"); }} style={{ padding: "4px 12px", borderRadius: 20, border: "2px solid " + (a.statut === "En attente" ? "#BA7517" : "#ddd"), background: a.statut === "En attente" ? "#BA751722" : "#fff", color: a.statut === "En attente" ? "#BA7517" : "#888", cursor: "pointer", fontSize: 12, fontWeight: a.statut === "En attente" ? 600 : 400 }}>⏳ En attente</button>
-              <button onClick={function() { setEditingAction(Object.assign({}, a)); setEditModal(true); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #ddd", background: "#fff", color: "#534AB7", cursor: "pointer", fontSize: 12 }}>✏️ Modifier</button>
+              <button onClick={function() { setEditingAction(Object.assign({}, a)); setEditModal(true); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #d0d0d0", background: "#fff", color: "#C8102E", cursor: "pointer", fontSize: 12 }}>✏️ Modifier</button>
               <button onClick={function() { deleteAction(a); }} style={{ padding: "4px 12px", borderRadius: 20, border: "1px solid #E24B4A44", background: "#fff", color: "#E24B4A", cursor: "pointer", fontSize: 12, marginLeft: "auto" }}>🗑️ Supprimer</button>
             </div>
             {/* Commentaire */}
             <div style={{ marginTop: 8 }}>
               {isEditing ? (
                 <div style={{ display: "flex", gap: 6 }}>
-                  <textarea value={comments[a.id] !== undefined ? comments[a.id] : (a.commentaire || "")} onChange={function(e) { setComments(Object.assign({}, comments, { [a.id]: e.target.value })); }} style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13, resize: "vertical", minHeight: 60 }} placeholder="Ajouter un commentaire..." />
+                  <textarea value={comments[a.id] !== undefined ? comments[a.id] : (a.commentaire || "")} onChange={function(e) { setComments(Object.assign({}, comments, { [a.id]: e.target.value })); }} style={{ flex: 1, padding: "6px 8px", borderRadius: 6, border: "1px solid #d0d0d0", fontSize: 13, resize: "vertical", minHeight: 60 }} placeholder="Ajouter un commentaire..." />
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    <button onClick={function() { saveComment(a); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>Sauver</button>
-                    <button onClick={function() { setEditingComment(null); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12 }}>Annuler</button>
+                    <button onClick={function() { saveComment(a); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12 }}>Sauver</button>
+                    <button onClick={function() { setEditingComment(null); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12 }}>Annuler</button>
                   </div>
                 </div>
               ) : (
-                <div onClick={function() { setEditingComment(a.id); setComments(Object.assign({}, comments, { [a.id]: a.commentaire || "" })); }} style={{ fontSize: 13, color: a.commentaire ? "#555" : "#bbb", fontStyle: a.commentaire ? "normal" : "italic", cursor: "pointer", padding: "4px 6px", borderRadius: 6, background: "#f7f5f0" }}>
+                <div onClick={function() { setEditingComment(a.id); setComments(Object.assign({}, comments, { [a.id]: a.commentaire || "" })); }} style={{ fontSize: 13, color: a.commentaire ? "#555" : "#bbb", fontStyle: a.commentaire ? "normal" : "italic", cursor: "pointer", padding: "4px 6px", borderRadius: 6, background: "#f4f4f4" }}>
                   {a.commentaire || "Cliquez pour ajouter un commentaire..."}
                 </div>
               )}
@@ -629,17 +622,17 @@ function FichePartenaire(props) {
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }}>
       <div style={{ background: "#fff", width: "100%", maxWidth: 520, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)", display: "flex", flexDirection: "column" }}>
         {/* Header fiche */}
-        <div style={{ padding: "20px 24px", borderBottom: "1px solid #f0ede6", display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8e8e8", display: "flex", alignItems: "flex-start", gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <TypeBadge t={p.type} />
               <Badge s={p.statut} />
             </div>
-            <h2 style={{ margin: "8px 0 4px", fontSize: 20, fontWeight: 700, color: "#2c2c2a" }}>{p.nom}</h2>
-            {p.contact_nom && <div style={{ fontSize: 14, color: "#666" }}>👤 {p.contact_nom}</div>}
-            {p.contact_email && <div style={{ fontSize: 13, color: "#534AB7" }}>✉️ {p.contact_email}</div>}
-            {p.contact_tel && <div style={{ fontSize: 13, color: "#666" }}>📞 {p.contact_tel}</div>}
-            {p.ville && <div style={{ fontSize: 13, color: "#666" }}>📍 {p.ville}{p.district ? " — " + p.district : ""}</div>}
+            <h2 style={{ margin: "8px 0 4px", fontSize: 20, fontWeight: 700, color: "#1a1a1a" }}>{p.nom}</h2>
+            {p.contact_nom && <div style={{ fontSize: 14, color: "#444" }}>👤 {p.contact_nom}</div>}
+            {p.contact_email && <div style={{ fontSize: 13, color: "#C8102E" }}>✉️ {p.contact_email}</div>}
+            {p.contact_tel && <div style={{ fontSize: 13, color: "#444" }}>📞 {p.contact_tel}</div>}
+            {p.ville && <div style={{ fontSize: 13, color: "#444" }}>📍 {p.ville}{p.district ? " — " + p.district : ""}</div>}
             {p.notes && <div style={{ fontSize: 13, color: "#888", marginTop: 6, fontStyle: "italic" }}>{p.notes}</div>}
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "#aaa", lineHeight: 1 }}>×</button>
@@ -648,7 +641,7 @@ function FichePartenaire(props) {
         {/* Actions */}
         <div style={{ flex: 1, padding: "20px 24px", overflowY: "auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>Actions & Historique</h3>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>Actions & Historique</h3>
             <button onClick={function() { setModal(true); }} style={btnA}>+ Planifier</button>
           </div>
 
@@ -662,7 +655,7 @@ function FichePartenaire(props) {
               )}
               {aVenir.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>À venir ({aVenir.length})</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#C8102E", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>À venir ({aVenir.length})</div>
                   {aVenir.map(function(a) { return <ActionItem key={a.id} action={a} />; })}
                 </div>
               )}
@@ -680,16 +673,16 @@ function FichePartenaire(props) {
         {/* Événements associés */}
         {evts.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📅 Événements associés ({evts.length})</h3>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>📅 Événements associés ({evts.length})</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {evts.map(function(e) {
-                var STATUT_EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+                var STATUT_EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
                 var color = STATUT_EVT_COLOR[e.statut] || "#888";
                 return (
-                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 4, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
                       <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
                         {e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}
                         {e.lieu ? " · " + e.lieu : ""}
@@ -708,16 +701,16 @@ function FichePartenaire(props) {
         {/* Événements associés */}
         {evts.length > 0 && (
           <div style={{ marginTop: 24 }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>📅 Événements associés ({evts.length})</h3>
+            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>📅 Événements associés ({evts.length})</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {evts.map(function(e) {
-                var EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+                var EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
                 var color = EVT_COLOR[e.statut] || "#888";
                 return (
-                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 4, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
                       <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
                         {e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}
                         {e.lieu ? " · " + e.lieu : ""}
@@ -777,6 +770,107 @@ function FichePartenaire(props) {
 }
 
 // ── PARTENAIRES ───────────────────────────────────────────────
+var CSV_PROSPECTS = [
+  { id:"p1",  nom:"ADENOT Lionel",       prenom:"Lionel",    civilite:"Mr",      type_csv:"",         tel:null,                    email:"lionel.adenot@decathlon.com",        organisation:"Decathlon",                                      job:"",                                              ville:"",                 adresse:"" },
+  { id:"p2",  nom:"ALEXANDER Tom",       prenom:"Tom",       civilite:"Mr",      type_csv:"Corporate",tel:"+84 79 7483800",         email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p3",  nom:"BASSON Paul",         prenom:"Paul",      civilite:"Mr",      type_csv:"",         tel:"+84 90 6937866",        email:"basson.p@gmail.com",                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p4",  nom:"BON Emmanuel",        prenom:"Emmanuel",  civilite:"Mr",      type_csv:"",         tel:"+62 812 81152 9055",    email:"emmanuelbonrugby@yahoo.fr",          organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p5",  nom:"BROWNRIGG Tracey",    prenom:"Tracey",    civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"tracey.brownrigg@bisvietnam.com",    organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p6",  nom:"BURIDARD Auriane",    prenom:"Auriane",   civilite:"Mrs/Ms",  type_csv:"",         tel:"+33 7 81 66 15 46",     email:null,                                 organisation:"La Guilde Européenne du Raid (ONG)",              job:"Chargée de mission Sport & Développement",      ville:"Paris, France",    adresse:"7, rue Pasquier - 75008 Paris" },
+  { id:"p7",  nom:"CAMARA Nelson",       prenom:"Nelson",    civilite:"Mr",      type_csv:"",         tel:"+221 77 644 20 21",     email:"nc@sport-impact.org",                organisation:"Sport en Commun",                                job:"Executive President",                           ville:"Dakar, Senegal",   adresse:"Immeuble 7 - Rue KA 05 - Karak, Dakar" },
+  { id:"p8",  nom:"CAMARET Arthur",      prenom:"Arthur",    civilite:"Mr",      type_csv:"",         tel:"+84 90 261 2360",       email:"arthur.camaret@gmail.com",           organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p9",  nom:"CAMPBELL John",       prenom:"John",      civilite:"Mr",      type_csv:"",         tel:null,                    email:"jcampbell@savills.com.vn",           organisation:"Savills Vietnam",                                job:"Director",                                      ville:"",                 adresse:"" },
+  { id:"p10", nom:"CANY Alain",          prenom:"Alain",     civilite:"Mr",      type_csv:"RCN, Corporate", tel:"+84 90 3660960",  email:"alain.cany@gmail.com",              organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p11", nom:"CASTANIER Patrick",   prenom:"Patrick",   civilite:"Mr",      type_csv:"",         tel:null,                    email:"patrick.castanier@pernod-ricard.com",organisation:"Pernod Ricard Asia Duty Free",                   job:"Directeur Commercial",                          ville:"",                 adresse:"" },
+  { id:"p12", nom:"CASTRES Fabrice",     prenom:"Fabrice",   civilite:"Mr",      type_csv:"School",   tel:null,                    email:"fabrice.castres22@gmail.com",        organisation:"Sedbergh Vietnam",                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p13", nom:"CHOUABIA Yacine",     prenom:"Yacine",    civilite:"Mr",      type_csv:"",         tel:null,                    email:"yacine.chouabia@edf.fr",             organisation:"EDF",                                            job:"Business Development Director Asia",             ville:"",                 adresse:"" },
+  { id:"p14", nom:"COLLEY Iain",         prenom:"Iain",      civilite:"Mr",      type_csv:"School",   tel:null,                    email:"iain.colley@bisvietnam.com",         organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p15", nom:"COLLIN Ronan",        prenom:"Ronan",     civilite:"Mr",      type_csv:"",         tel:"+34 644 573 130",       email:"ronan@ngo-shoes.com",                organisation:"N'go",                                           job:"COO",                                           ville:"",                 adresse:"" },
+  { id:"p16", nom:"DASSONVILLE Astrid",  prenom:"Astrid",    civilite:"Mrs/Ms",  type_csv:"",         tel:"+84 90 950 39 94",      email:null,                                 organisation:"TotalEnergies",                                  job:"",                                              ville:"",                 adresse:"" },
+  { id:"p17", nom:"DEBLOCK Alain",       prenom:"Alain",     civilite:"Mr",      type_csv:"",         tel:"+33 6 61 70 82 27",     email:"deblock@terralto.com",               organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p18", nom:"DESCHAMPS Jean-Marc", prenom:"Jean-Marc", civilite:"Mr",      type_csv:"Corporate",tel:"+84 16 97909498",       email:"jean-marc.deschamps@mazars.vn",      organisation:"Forvis Mazars",                                  job:"Senior Advisor",                                ville:"",                 adresse:"" },
+  { id:"p19", nom:"DÉSIR Patrick",       prenom:"Patrick",   civilite:"Mr",      type_csv:"",         tel:"+84 90 3171 1199",      email:"pdesir@poussieresdevie.org",         organisation:"Poussières de Vie",                              job:"",                                              ville:"",                 adresse:"" },
+  { id:"p20", nom:"DIAS Christophe",     prenom:"Christophe",civilite:"Mr",      type_csv:"",         tel:"+33 6 72 93 15 69",     email:"richyf@afd.fr",                      organisation:"Agence Française de Développement (AFD)",         job:"Chargé de Mission - Sport & Développement",     ville:"Paris, France",    adresse:"5 rue Roland Barthes - 75012 Paris" },
+  { id:"p21", nom:"DINH Barbara",        prenom:"Barbara",   civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:"barbara.dinh@pierre-fabre.com",      organisation:"Pierre Fabre",                                   job:"",                                              ville:"",                 adresse:"" },
+  { id:"p22", nom:"DOAN VIET Dai Tu",    prenom:"Dai Tu",    civilite:"Mr",      type_csv:"",         tel:null,                    email:"daitu.doanviet@openasiagroup.com",   organisation:"Open Asia",                                      job:"Chairman",                                      ville:"",                 adresse:"" },
+  { id:"p23", nom:"DUNCAN Drew",         prenom:"Drew",      civilite:"Mr",      type_csv:"",         tel:"+84 96 627 327",        email:"drew.duncan@dhl.com",                organisation:"DHL",                                            job:"Managing Director",                             ville:"",                 adresse:"" },
+  { id:"p24", nom:"DURAN LOPEZ Juan-Pedro",prenom:"Juan-Pedro",civilite:"Mr",    type_csv:"",         tel:"+84 901 43 91 43",      email:"juanpedro.duranlopez@bpce-vietnam.com",organisation:"BPCE IOM",                                     job:"General Manager",                               ville:"HCMC, Vietnam",    adresse:"Green Power Tower 21st Floor, 35 Ton Duc Thang, Dist. 1" },
+  { id:"p25", nom:"ELLIS Gavin",         prenom:"Gavin",     civilite:"Mr",      type_csv:"RCN",      tel:"+84 58 291 6291",       email:"gavin.ellis.pro@gmail.com",          organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p26", nom:"EVANS Jodie",         prenom:"Jodie",     civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"jodie.evans@sedbergh.edu.vn",        organisation:"Sedbergh Vietnam",                               job:"Headmistress",                                  ville:"",                 adresse:"" },
+  { id:"p27", nom:"FAGES Olivier",       prenom:"Olivier",   civilite:"Mr",      type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p28", nom:"FISSE Benoit",        prenom:"Benoit",    civilite:"Mr",      type_csv:"",         tel:null,                    email:"scufisse@gmail.com",                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p29", nom:"FRASER Mark",         prenom:"Mark",      civilite:"Mr",      type_csv:"Corporate",tel:"+84 90 3837119",        email:"mark.fraser@frasersvn.com",          organisation:"Frasers Law Company, Vietnam",                   job:"Founding Managing Partner",                     ville:"",                 adresse:"" },
+  { id:"p30", nom:"FRAZIER Michael",     prenom:"Michael",   civilite:"Mr",      type_csv:"Corporate",tel:"+84 79 7483800",        email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p31", nom:"GASPAR Lisa-Marie",   prenom:"Lisa-Marie",civilite:"Mrs/Ms",  type_csv:"",         tel:"+33 143 24 79 39",      email:"lgaspar@unenfantparlamain.org",      organisation:"Un Enfant par la Main",                          job:"Responsable communication",                     ville:"Nogent sur Marne", adresse:"2 boulevard Albert 1er, 94130 Nogent sur Marne" },
+  { id:"p32", nom:"GILLIN Mark",         prenom:"Mark",      civilite:"Mr",      type_csv:"Corporate",tel:"+84 903 804 860",       email:"markg@aimup.com",                    organisation:"America Indochina Management Vietnam",            job:"Director",                                      ville:"HCMC, Vietnam",    adresse:"117-119-121 Nguyen Du, Dist. 1" },
+  { id:"p33", nom:"GIROUX Thibaut",      prenom:"Thibaut",   civilite:"Mr",      type_csv:"Corporate",tel:"+84 9 08 99 39 77",     email:"tgiroux@gmail.com",                  organisation:"Stolz-Miras",                                    job:"CEO",                                           ville:"Bien Hoa, Vietnam", adresse:"Lot 521, Street no.13, Amata IP, Long Binh" },
+  { id:"p34", nom:"GOUPILLE Antoine",    prenom:"Antoine",   civilite:"Mr",      type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p35", nom:"GUILLON Le Thu",      prenom:"Le Thu",    civilite:"Mrs/Ms",  type_csv:"",         tel:"+84 90 9240758",        email:"lethu.nguyen@fvhospital.com",        organisation:"FV Hospital",                                    job:"",                                              ville:"",                 adresse:"" },
+  { id:"p36", nom:"GUILLON Jean Marcel", prenom:"Jean Marcel",civilite:"Mr",     type_csv:"",         tel:"+84 90 3701691",        email:"guillonjm@fvhospital.com",           organisation:"FV Hospital",                                    job:"",                                              ville:"",                 adresse:"" },
+  { id:"p37", nom:"HALLAK Gregory",      prenom:"Gregory",   civilite:"Mr",      type_csv:"Corporate",tel:"+84 989 088 814",       email:"gregory.hallak@cartier.com",         organisation:"Cartier Joailliers",                             job:"Managing Director",                             ville:"HCMC, Vietnam",    adresse:"Room 5a, Level 5, Opera View Building, 161 Dong Khoi" },
+  { id:"p38", nom:"HAMAÏDE Julia",       prenom:"Julia",     civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:"redaction@koimagazine.fr",           organisation:"Koï magazine",                                   job:"Fondatrice et rédactrice en chef",               ville:"",                 adresse:"" },
+  { id:"p39", nom:"HERENT Eric",         prenom:"Eric",      civilite:"Mr",      type_csv:"Corporate",tel:"+84 969 061 506",       email:"eric.herent@aimup.com",              organisation:"America Indochina Management Vietnam",            job:"Division Manager",                              ville:"HCMC, Vietnam",    adresse:"117-119-121 Nguyen Du, Dist. 1" },
+  { id:"p40", nom:"HIGGINS Stephen",     prenom:"Stephen",   civilite:"Mr",      type_csv:"",         tel:"+84 12 6571 4416",      email:"stephen.higgins65@gmail.com",        organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p41", nom:"HOANG Minh",          prenom:"Minh",      civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:"minh@febe.vc",                       organisation:"FEBE Ventures",                                  job:"Director of Operations & Platform",             ville:"",                 adresse:"" },
+  { id:"p42", nom:"HSU Angela",          prenom:"Angela",    civilite:"Mrs/Ms",  type_csv:"",         tel:"+84 91 5205209",        email:"angelas728@gmail.com",               organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p43", nom:"JONCAS Jean-Pierre",  prenom:"Jean-Pierre",civilite:"Mr",     type_csv:"Corporate",tel:"+84 901 355 006",       email:"jeanpierre.joncas@accor.com",        organisation:"Accor",                                          job:"General Manager, Area GM Southern Vietnam",     ville:"HCMC, Vietnam",    adresse:"76-78 Nguyen Thi Minh Khai, Ward 6, Dist. 3" },
+  { id:"p44", nom:"JONES Mark",          prenom:"Mark",      civilite:"Mr",      type_csv:"School",   tel:null,                    email:"mark.jones@bisvietnam.com",          organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p45", nom:"JONVILLE Stanley",    prenom:"Stanley",   civilite:"Mr",      type_csv:"",         tel:"+84 90 8681912",        email:"jonville.stan@gmail.com",            organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p46", nom:"KOULAKSEZIAN Adam",   prenom:"Adam",      civilite:"Mr",      type_csv:"Corporate",tel:"+84 28 38 23 88 22",    email:"adam.koulaksezian@ccifv.org",        organisation:"La CCI France Vietnam (CCIFV)",                  job:"Directeur Exécutif",                            ville:"HCMC, Vietnam",    adresse:"186 Nguyễn Văn Hưởng, Thảo Điền, Q.2" },
+  { id:"p47", nom:"LACHIZE Didier",      prenom:"Didier",    civilite:"Mr",      type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p48", nom:"LE GARZIC Yves",      prenom:"Yves",      civilite:"Mr",      type_csv:"",         tel:null,                    email:"lgjy@yahoo.fr",                      organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p49", nom:"LEAL DE LA TORRE François Xavier",prenom:"François Xavier",civilite:"Mr",type_csv:"",tel:"364546907",          email:null,                                 organisation:"K1 Fitness And Fight Factory",                   job:"",                                              ville:"",                 adresse:"" },
+  { id:"p50", nom:"LEVISON Emma",        prenom:"Emma",      civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"emma.levison@teacher.sedbergh.edu.vn",organisation:"Sedbergh Vietnam",                              job:"Head of PE Department",                         ville:"",                 adresse:"" },
+  { id:"p51", nom:"LORTHOLARY-NGUYEN Christine",prenom:"Christine",civilite:"Mrs/Ms",type_csv:"",tel:null,                        email:"thihanhchristine@yahoo.fr",          organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p52", nom:"LUONG Nicolas",       prenom:"Nicolas",   civilite:"Mr",      type_csv:"",         tel:"+84 90 8691123",        email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p53", nom:"MERLIN Eric",         prenom:"Eric",      civilite:"Mr",      type_csv:"",         tel:"+84 90 340 1035",       email:"eric@appletree-asia.com",            organisation:"The Apple Tree Group",                           job:"CEO",                                           ville:"HCMC, Vietnam",    adresse:"18 Hai Ba Trung, Ben Nghe Ward, Dist.1" },
+  { id:"p54", nom:"MERLIN Ha Phuong",    prenom:"Ha Phuong", civilite:"",        type_csv:"",         tel:null,                    email:"phuongha_merlin@yahoo.com",          organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p55", nom:"MEYER Thomas",        prenom:"Thomas",    civilite:"Mr",      type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p56", nom:"MOUAT Leslie",        prenom:"Leslie",    civilite:"Mr",      type_csv:"",         tel:"+84 93 4191025",        email:"leslie.mouat@marsh.com",             organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p57", nom:"MY CAM Tu",           prenom:"Tu",        civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"tu.cam.quan@vas.edu.vn",             organisation:"Vietnam Australia Intl School",                  job:"Central Academic Team",                         ville:"",                 adresse:"" },
+  { id:"p58", nom:"NGUY Michel",         prenom:"Michel",    civilite:"Mr",      type_csv:"",         tel:"01 80 60 13 16",        email:"michel@yuman-immobilier.fr",         organisation:"",                                               job:"Directeur Général",                             ville:"",                 adresse:"" },
+  { id:"p59", nom:"NGUYEN Maurice",      prenom:"Maurice",   civilite:"Mr",      type_csv:"",         tel:"+84 90 3752928",        email:"maurice.nguyen@kcnvietnam.com",      organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p60", nom:"NGUYEN Hai-Nam",      prenom:"Hai-Nam",   civilite:"Mr",      type_csv:"",         tel:"+33 7 6157 7658",       email:"hainam.nguyen@abvietfrance.org",     organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p61", nom:"NGUYEN An",           prenom:"An",        civilite:"",        type_csv:"",         tel:"+84 91 295 3667",       email:"a.nguyen@indochinemedia.com",        organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p62", nom:"NGUYEN Thu",          prenom:"Thu",       civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"thu.thien.nguyen@vas.edu.vn",        organisation:"Vietnam Australia Intl School",                  job:"Central Academic Team",                         ville:"",                 adresse:"" },
+  { id:"p63", nom:"NIEUWENHUIZEN Tania", prenom:"Tania",     civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"tania.nieuwenhuizen@teacher.sedbergh.edu.vn",organisation:"",                                      job:"",                                              ville:"",                 adresse:"" },
+  { id:"p64", nom:"PAVILLON GROSSER Emmanuelle",prenom:"Emmanuelle",civilite:"Mrs/Ms",type_csv:"",tel:"+84 90 3816027",           email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p65", nom:"PEEL Tom",            prenom:"Tom",       civilite:"Mr",      type_csv:"",         tel:null,                    email:"thomasepeel@googlemail.com",         organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p66", nom:"PELLETIER Stef",      prenom:"Stef",      civilite:"Mr",      type_csv:"",         tel:"+84 90 9153577",        email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p67", nom:"PEREZ Audrey",        prenom:"Audrey",    civilite:"Mrs/Ms",  type_csv:"",         tel:"364546907",             email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p68", nom:"PHOEUONG Sakal",      prenom:"Sakal",     civilite:"Mr",      type_csv:"Corporate",tel:"+84 90 2597009",        email:"sakaph@hotmail.com",                 organisation:"P'ti Saigon",                                    job:"Chef",                                          ville:"HCMC, Vietnam",    adresse:"52 Ngô Quang Huy, Thảo Điền, Thủ Đức" },
+  { id:"p69", nom:"PHUONG THAO Sarah",   prenom:"Sarah",     civilite:"Mrs/Ms",  type_csv:"Corporate",tel:null,                    email:"sarah@febe.vc",                      organisation:"FEBE Ventures",                                  job:"",                                              ville:"",                 adresse:"" },
+  { id:"p70", nom:"PIER Laurenza",       prenom:"Laurenza",  civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p71", nom:"PINATELLE Xavier",    prenom:"Xavier",    civilite:"Mr",      type_csv:"",         tel:null,                    email:"xavier.pinatelle@total.com",         organisation:"TotalEnergies",                                  job:"Directeur de Division CEE",                     ville:"",                 adresse:"" },
+  { id:"p72", nom:"POIRIER Jean-Noel",   prenom:"Jean-Noel", civilite:"Mr",      type_csv:"Corporate",tel:"+84 932 396 486",       email:"parishanoi2012@gmail.com",           organisation:"ALMA Viet Nam Consulting Ltd",                   job:"Chairman",                                      ville:"Hanoi, Vietnam",   adresse:"36 Ham Long, Hoan Kiem, Ha Noi" },
+  { id:"p73", nom:"RAUSSIN Olivier",     prenom:"Olivier",   civilite:"Mr",      type_csv:"Corporate",tel:null,                    email:"olivier@febe.vc",                    organisation:"FEBE Ventures",                                  job:"CEO",                                            ville:"",                 adresse:"" },
+  { id:"p74", nom:"RINGSTAD Jonas",      prenom:"Jonas",     civilite:"Mr",      type_csv:"",         tel:"+84 98 9868671",        email:"jonas@etown.com.vn",                 organisation:"",                                               job:"Property Manager",                              ville:"",                 adresse:"" },
+  { id:"p75", nom:"ROUSSEAU Michel",     prenom:"Michel",    civilite:"Mr",      type_csv:"",         tel:"+84 90 9153577",        email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p76", nom:"ROWLANDS Anthony",    prenom:"Anthony",   civilite:"Mr",      type_csv:"School",   tel:null,                    email:"anthony.rowlands@bisvietnam.com",    organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p77", nom:"SAUVAGEOT Bertrand",  prenom:"Bertrand",  civilite:"Mr",      type_csv:"School",   tel:null,                    email:null,                                 organisation:"Vietnam Australia Intl School",                  job:"Chief Executive Officer",                       ville:"",                 adresse:"" },
+  { id:"p78", nom:"SCHELLES Christopher",prenom:"Christopher",civilite:"Mr",     type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p79", nom:"SENOUCI Bruno",       prenom:"Bruno",     civilite:"Mr",      type_csv:"",         tel:null,                    email:"bruno.senouci@drcomgroup.com",       organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p80", nom:"SON Hoang",           prenom:"Hoang",     civilite:"",        type_csv:"",         tel:"+84 90 371213",         email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p81", nom:"STACEY Daniel",       prenom:"Daniel",    civilite:"Mr",      type_csv:"",         tel:"+84 90 8293753",        email:"dmstacey@hotmail.co.uk",             organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p82", nom:"TARWATER Kathlyn",    prenom:"Kathlyn",   civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:"kathlyn.tarwater1@vas.edu.vn",       organisation:"Vietnam Australia Intl School",                  job:"Head of Extracurricular Activities",             ville:"",                 adresse:"" },
+  { id:"p83", nom:"TAYLOR Brook",        prenom:"Brook",     civilite:"Mr",      type_csv:"Corporate",tel:"+84 90 8629 993",       email:"brook.taylor@vinacapital.com",       organisation:"VinaCapital",                                    job:"CEO Asset Management",                          ville:"HCMC, Vietnam",    adresse:"17th Floor, Sun Wah Tower, 115 Nguyen Hue, Dist. 1" },
+  { id:"p84", nom:"THOMAS Henri",        prenom:"Henri",     civilite:"Mr",      type_csv:"",         tel:"+1 6 4379 3117",        email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p85", nom:"TIN Mai Huu",         prenom:"Mai Huu",   civilite:"Mrs/Ms",  type_csv:"Corporate",tel:"+84 913 951 309",       email:"tinmh@unigroup.com.vn",              organisation:"U&I Investment Corporation (Unigroup)",           job:"Chairman & CEO",                                ville:"Binh Duong",       adresse:"158 Ngo Gia Tu, Chanh Nghia ward, Thu Dau Mot city" },
+  { id:"p86", nom:"TRAN Minh",           prenom:"Minh",      civilite:"Mrs/Ms",  type_csv:"School",   tel:null,                    email:"minh.tran@bisvietnam.com",           organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p87", nom:"TRAN SI Dang",        prenom:"Dang",      civilite:"Mr",      type_csv:"School",   tel:null,                    email:"dang.tran@sedbergh.edu.vn",          organisation:"Sedbergh Vietnam",                               job:"ECA Field trip Coordinator",                    ville:"",                 adresse:"" },
+  { id:"p88", nom:"TRESSENS Paul",       prenom:"Paul",       civilite:"Mr",     type_csv:"",         tel:null,                    email:"tressens-paul@orange.fr",            organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p89", nom:"TSANG Andrew",        prenom:"Andrew",    civilite:"Mr",      type_csv:"",         tel:"+84 90 8127280",        email:"dr.andrew@westcoastinternational.com",organisation:"",                                              job:"",                                              ville:"",                 adresse:"" },
+  { id:"p90", nom:"VANNAV0NG Catherine", prenom:"Catherine", civilite:"Mrs/Ms",  type_csv:"",         tel:null,                    email:null,                                 organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p91", nom:"VILLARD Marc",        prenom:"Marc",      civilite:"Mr",      type_csv:"",         tel:null,                    email:"dhbthuy@yahoo.com",                  organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p92", nom:"VOISIN Jean-Luc",     prenom:"Jean-Luc",  civilite:"Mr",      type_csv:"",         tel:"+84 903 664 048",       email:"dg@vergersmekong.com.vn",            organisation:"Les Vergers Du Mékong",                          job:"General Director",                              ville:"HCMC, Vietnam",    adresse:"11 Thai Thuan Street, An Khanh An Phu, Dist. 2" },
+  { id:"p93", nom:"WEEKS John",          prenom:"John",      civilite:"Mr",      type_csv:"School",   tel:null,                    email:"jdweeks.85@gmail.com",               organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p94", nom:"WILLS Gareth",        prenom:"Gareth",    civilite:"Mr",      type_csv:"School",   tel:null,                    email:"gareth.wills@bisvietnam.com",        organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p95", nom:"WOLFE Alex Paul",     prenom:"Alex Paul", civilite:"Mr",      type_csv:"",         tel:"+84 86 8140647",        email:"alex.wolfe@hotmail.co.uk",           organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+  { id:"p96", nom:"WYDNHAM Caitlin",     prenom:"Caitlin",   civilite:"Mrs/Ms",  type_csv:"",         tel:"+84 39 4634 855",       email:"caitlin@bdcf.org",                   organisation:"Blue Dragon Children's Foundation",              job:"Resources and Partnerships Leader",             ville:"",                 adresse:"" },
+  { id:"p97", nom:"WYLD Robert",         prenom:"Robert",    civilite:"Mr",      type_csv:"",         tel:"+84 909 909 555",       email:"robertwyld@pacificcross.com.vn",     organisation:"Pacific Cross",                                  job:"Chief Executive Officer",                       ville:"HCMC, Vietnam",    adresse:"6th Floor, VNPT Building, 1487 Nguyen Van Linh St, Dist. 7" },
+  { id:"p98", nom:"ZIBULSKI Marc",       prenom:"Marc",      civilite:"Mr",      type_csv:"",         tel:"+84 90 3600982",        email:"marc.zibulski@horsington.vn",        organisation:"",                                               job:"",                                              ville:"",                 adresse:"" },
+];
+
 function Partenaires() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
@@ -785,6 +879,14 @@ function Partenaires() {
   var ems = useState(false); var editModal = ems[0]; var setEditModal = ems[1];
   var efs = useState(null); var editForm = efs[0]; var setEditForm = efs[1];
   var ficheState = useState(null); var ficheId = ficheState[0]; var setFicheId = ficheState[1];
+
+  // Prospects
+  var convertState = useState(null); var convertTarget = convertState[0]; var setConvertTarget = convertState[1];
+  var convertTypeState = useState("ONG"); var convertType = convertTypeState[0]; var setConvertType = convertTypeState[1];
+  var convertingState = useState(false); var converting = convertingState[0]; var setConverting = convertingState[1];
+  var convertedState = useState({}); var converted = convertedState[0]; var setConverted = convertedState[1];
+  var prospectSearch = useState(""); var pSearch = prospectSearch[0]; var setPSearch = prospectSearch[1];
+
   var EMPTY_FORM = { nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", adresse: "", district: "", nombre_enfants: "", montant_annuel: "", statut: "Actif", notes: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
 
@@ -822,58 +924,197 @@ function Partenaires() {
 
   function setEdit(k, v) { setEditForm(Object.assign({}, editForm, { [k]: v })); }
 
+  function handleConvert() {
+    if (!convertTarget) return;
+    setConverting(true);
+    var p = convertTarget;
+    var payload = {
+      nom: p.organisation || p.nom,
+      type: convertType,
+      contact_nom: p.nom,
+      contact_email: p.email || "",
+      contact_tel: p.tel || "",
+      adresse: p.adresse || "",
+      ville: p.ville || "",
+      statut: "Prospect",
+      notes: [p.job, p.type_csv ? "Source CSV: " + p.type_csv : ""].filter(Boolean).join(" · "),
+      nombre_enfants: null,
+      montant_annuel: 0,
+    };
+    sbInsert("partenaires", payload).then(function(rows) {
+      setData(data.concat(rows[0]));
+      setConverted(Object.assign({}, converted, { [p.id]: convertType }));
+      setConverting(false);
+      setConvertTarget(null);
+    }).catch(function(e) { alert(e.message); setConverting(false); });
+  }
+
+  // Détection persistante : un prospect est converti s'il existe déjà en base
+  // (match par email OU par contact_nom exact) ou converti dans cette session
+  function isConverted(p) {
+    if (converted[p.id]) return { done: true, type: converted[p.id] };
+    var match = data.find(function(d) {
+      if (p.email && d.contact_email && d.contact_email.toLowerCase() === p.email.toLowerCase()) return true;
+      if (d.contact_nom && d.contact_nom.toLowerCase() === p.nom.toLowerCase()) return true;
+      return false;
+    });
+    if (match) return { done: true, type: match.type };
+    return { done: false };
+  }
+
+  // Filtre prospect
+  var prospectFiltered = CSV_PROSPECTS.filter(function(p) {
+    var conv = isConverted(p);
+    if (conv.done) return false;
+    var q = pSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (p.nom + " " + (p.organisation||"") + " " + (p.ville||"") + " " + (p.email||"")).toLowerCase().indexOf(q) >= 0;
+  });
+
+  // Compteur total non convertis
+  var totalNonConverts = CSV_PROSPECTS.filter(function(p) { return !isConverted(p).done; }).length;
+
+  var PROSPECT_COLOR = "#D97706";
+
   if (loading) return <Spinner />;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Barre de filtres */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {types.map(function(t) {
             var active = filtre === t;
-            var color = TYPE_COLOR[t] || "#534AB7";
+            var color = TYPE_COLOR[t] || "#C8102E";
             return (
               <button key={t} onClick={function() { setFiltre(t); }} style={{ padding: "5px 14px", borderRadius: 20, border: "1px solid " + (active ? color : "#ddd"), background: active ? color : "#fff", color: active ? "#fff" : "#555", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400 }}>
                 {TYPE_ICON[t] ? TYPE_ICON[t] + " " : ""}{t}
               </button>
             );
           })}
+          {/* Onglet Prospects */}
+          <button onClick={function() { setFiltre("Prospects"); }} style={{ padding: "5px 14px", borderRadius: 20, border: "1px solid " + (filtre === "Prospects" ? PROSPECT_COLOR : "#ddd"), background: filtre === "Prospects" ? PROSPECT_COLOR : "#fff", color: filtre === "Prospects" ? "#fff" : "#555", cursor: "pointer", fontSize: 13, fontWeight: filtre === "Prospects" ? 600 : 400 }}>
+            🎯 Prospects <span style={{ background: filtre === "Prospects" ? "rgba(255,255,255,0.25)" : PROSPECT_COLOR + "22", color: filtre === "Prospects" ? "#fff" : PROSPECT_COLOR, borderRadius: 20, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>{totalNonConverts}</span>
+          </button>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "#888" }}>{filtered.length} partenaire{filtered.length > 1 ? "s" : ""}</span>
-          <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
-        </div>
+        {filtre !== "Prospects" && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 13, color: "#888" }}>{filtered.length} partenaire{filtered.length > 1 ? "s" : ""}</span>
+            <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
+          </div>
+        )}
       </div>
 
-      {filtered.length === 0 ? <Empty msg={"Aucun " + (filtre === "Tous" ? "partenaire" : filtre) + " — cliquez + Ajouter"} /> : (
-        <TableUI headers={["ORGANISATION", "TYPE", "LOCATION", "STATUS", "RESPONSIBLE", "EMAIL", "PHONE", ""]}>
-          {filtered.map(function(p) {
-            return (
-              <tr key={p.id} onClick={function() { setFicheId(p.id); }} style={{ borderBottom: "1px solid #f0ede6", cursor: "pointer" }}
-                onMouseEnter={function(e) { e.currentTarget.style.background = "#f7f5f0"; }}
-                onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
-                <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500, color: "#2c2c2a" }}>{p.nom}</td>
-                <td style={{ padding: "10px 12px" }}><TypeBadge t={p.type} /></td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.ville || p.district || "—"}</td>
-                <td style={{ padding: "10px 12px" }}><Badge s={p.statut} /></td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_nom || "—"}</td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_email || "—"}</td>
-                <td style={{ padding: "10px 12px", fontSize: 13, color: "#666" }}>{p.contact_tel || "—"}</td>
-                <td style={{ padding: "10px 12px" }}>
-                  <button onClick={function(e) { e.stopPropagation(); setEditForm(p); setEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7" }}>✏️ Modifier</button>
-                </td>
-              </tr>
-            );
-          })}
-        </TableUI>
+      {/* VUE PROSPECTS */}
+      {filtre === "Prospects" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <input value={pSearch} onChange={function(e) { setPSearch(e.target.value); }} placeholder="🔍 Rechercher (nom, organisation, ville, email)..." style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 14, outline: "none" }} />
+            <span style={{ fontSize: 13, color: "#888", whiteSpace: "nowrap" }}>{prospectFiltered.length} contact{prospectFiltered.length > 1 ? "s" : ""}</span>
+          </div>
+
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f4f4f4" }}>
+                    {["NOM", "ORGANISATION", "POSTE", "EMAIL", "TÉLÉPHONE", "VILLE", "TYPE CSV", ""].map(function(h) {
+                      return <th key={h} style={{ padding: "10px 12px", fontSize: 11, fontWeight: 600, color: "#888", textAlign: "left", borderBottom: "1px solid #e0e0e0", whiteSpace: "nowrap" }}>{h}</th>;
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {prospectFiltered.map(function(p) {
+                    var convInfo = isConverted(p); var alreadyDone = convInfo.done;
+                    return (
+                      <tr key={p.id} style={{ borderBottom: "1px solid #e8e8e8", opacity: alreadyDone ? 0.4 : 1 }}>
+                        <td style={{ padding: "9px 12px", fontWeight: 500, color: "#1a1a1a", whiteSpace: "nowrap" }}>{p.nom}</td>
+                        <td style={{ padding: "9px 12px", color: "#444", maxWidth: 200 }}>{p.organisation || <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ padding: "9px 12px", color: "#444", maxWidth: 180, fontSize: 12 }}>{p.job || <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ padding: "9px 12px", color: "#C8102E", fontSize: 12 }}>{p.email || <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ padding: "9px 12px", color: "#444", whiteSpace: "nowrap" }}>{p.tel || <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ padding: "9px 12px", color: "#444", fontSize: 12, whiteSpace: "nowrap" }}>{p.ville || <span style={{ color: "#ccc" }}>—</span>}</td>
+                        <td style={{ padding: "9px 12px" }}>
+                          {p.type_csv ? <span style={{ background: "#C8102E11", color: "#C8102E", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600 }}>{p.type_csv}</span> : <span style={{ color: "#ccc" }}>—</span>}
+                        </td>
+                        <td style={{ padding: "9px 12px", whiteSpace: "nowrap" }}>
+                          {alreadyDone
+                            ? <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 600 }}>✓ Converti en {convInfo.type}</span>
+                            : <button onClick={function() { setConvertTarget(p); setConvertType("ONG"); }} style={{ padding: "4px 12px", borderRadius: 8, border: "1px solid " + PROSPECT_COLOR, background: PROSPECT_COLOR + "11", color: PROSPECT_COLOR, cursor: "pointer", fontSize: 12, fontWeight: 600 }}>↗ Convertir</button>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
+      {/* VUE PARTENAIRES NORMAUX */}
+      {filtre !== "Prospects" && (
+        filtered.length === 0 ? <Empty msg={"Aucun " + (filtre === "Tous" ? "partenaire" : filtre) + " — cliquez + Ajouter"} /> : (
+          <TableUI headers={["ORGANISATION", "TYPE", "LOCATION", "STATUS", "RESPONSIBLE", "EMAIL", "PHONE", ""]}>
+            {filtered.map(function(p) {
+              return (
+                <tr key={p.id} onClick={function() { setFicheId(p.id); }} style={{ borderBottom: "1px solid #e8e8e8", cursor: "pointer" }}
+                  onMouseEnter={function(e) { e.currentTarget.style.background = "#f4f4f4"; }}
+                  onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
+                  <td style={{ padding: "10px 12px", fontSize: 14, fontWeight: 500, color: "#1a1a1a" }}>{p.nom}</td>
+                  <td style={{ padding: "10px 12px" }}><TypeBadge t={p.type} /></td>
+                  <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.ville || p.district || "—"}</td>
+                  <td style={{ padding: "10px 12px" }}><Badge s={p.statut} /></td>
+                  <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.contact_nom || "—"}</td>
+                  <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.contact_email || "—"}</td>
+                  <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.contact_tel || "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <button onClick={function(e) { e.stopPropagation(); setEditForm(p); setEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#C8102E" }}>✏️ Modifier</button>
+                  </td>
+                </tr>
+              );
+            })}
+          </TableUI>
+        )
+      )}
+
+      {/* MODAL CONVERSION PROSPECT */}
+      {convertTarget && <Modal open={!!convertTarget} onClose={function() { setConvertTarget(null); }} title={"Convertir — " + convertTarget.nom}>
+        <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{convertTarget.organisation || "Pas d'organisation"}</div>
+          {convertTarget.job && <div style={{ fontSize: 12, color: "#444" }}>{convertTarget.job}</div>}
+          {convertTarget.email && <div style={{ fontSize: 12, color: "#C8102E", marginTop: 2 }}>{convertTarget.email}</div>}
+          {convertTarget.tel && <div style={{ fontSize: 12, color: "#444" }}>{convertTarget.tel}</div>}
+          {convertTarget.ville && <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{convertTarget.ville}</div>}
+        </div>
+        <Field label="Convertir en *">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {["ONG","Shelter","Ecole","Sponsor"].map(function(t) {
+              var active = convertType === t;
+              return <button key={t} onClick={function() { setConvertType(t); }} style={{ padding: "10px 8px", borderRadius: 10, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e0e0e0"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 14, fontWeight: active ? 700 : 400, color: active ? TYPE_COLOR[t] : "#666", transition: "all .15s" }}>
+                {TYPE_ICON[t]} {t}
+              </button>;
+            })}
+          </div>
+        </Field>
+        <div style={{ fontSize: 12, color: "#888", marginTop: 8, padding: "8px 12px", background: "#f4f4f4", borderRadius: 8 }}>
+          Ce contact sera ajouté dans <strong>Partenaires → {convertType}</strong> avec le statut <strong>Prospect</strong>. Il disparaîtra de la liste Prospects dans cette session.
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+          <button onClick={function() { setConvertTarget(null); }} style={btnS}>Annuler</button>
+          <button onClick={handleConvert} disabled={converting} style={Object.assign({}, btnP, { opacity: converting ? 0.6 : 1 })}>
+            {converting ? "Conversion…" : "↗ Confirmer la conversion"}
+          </button>
+        </div>
+      </Modal>}
 
       {editForm && <Modal open={editModal} onClose={function() { setEditModal(false); }} title={"Modifier — " + (editForm.nom || "")}>
         <Field label="Type *">
           <div style={{ display: "flex", gap: 8 }}>
             {["ONG","Shelter","Ecole","Sponsor"].map(function(t) {
               var active = editForm.type === t;
-              return <button key={t} onClick={function() { setEdit("type", t); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e8e6de"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? TYPE_COLOR[t] : "#666" }}>{TYPE_ICON[t]}<br />{t}</button>;
+              return <button key={t} onClick={function() { setEdit("type", t); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e0e0e0"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? TYPE_COLOR[t] : "#666" }}>{TYPE_ICON[t]}<br />{t}</button>;
             })}
           </div>
         </Field>
@@ -912,7 +1153,7 @@ function Partenaires() {
             {["ONG","Shelter","Ecole","Sponsor"].map(function(t) {
               var active = form.type === t;
               return (
-                <button key={t} onClick={function() { set("type", t); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e8e6de"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? TYPE_COLOR[t] : "#666" }}>
+                <button key={t} onClick={function() { set("type", t); }} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: "2px solid " + (active ? TYPE_COLOR[t] : "#e0e0e0"), background: active ? TYPE_COLOR[t] + "11" : "#fff", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? TYPE_COLOR[t] : "#666" }}>
                   {TYPE_ICON[t]}<br />{t}
                 </button>
               );
@@ -957,11 +1198,11 @@ function CoachMultiSelect(props) {
       {coaches.map(function(c) {
         var isSelected = selected.indexOf(c.id) !== -1;
         return (
-          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? "#534AB7" : "#e8e6de"), background: isSelected ? "#534AB711" : "#fff", cursor: "pointer" }}>
+          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? "#C8102E" : "#e0e0e0"), background: isSelected ? "#C8102E11" : "#fff", cursor: "pointer" }}>
             <input type="checkbox" checked={isSelected} onChange={function() {
               if (isSelected) onChange(selected.filter(function(id) { return id !== c.id; }));
               else onChange(selected.concat(c.id));
-            }} style={{ accentColor: "#534AB7" }} />
+            }} style={{ accentColor: "#C8102E" }} />
             <span style={{ fontSize: 13, fontWeight: isSelected ? 500 : 400, flex: 1 }}>{c.prenom} {c.nom}</span>
             <span style={{ fontSize: 12, color: "#aaa" }}>{c.pays || ""} · {c.langues || ""}</span>
           </label>
@@ -980,7 +1221,7 @@ function EvtTaches(props) {
   var titleState = useState(""); var title = titleState[0]; var setTitle = titleState[1];
   var prioriteState = useState("Moyenne"); var priorite = prioriteState[0]; var setPriorite = prioriteState[1];
 
-  var PRIO_COLOR = { Urgente: "#A32D2D", Haute: "#BA7517", Moyenne: "#534AB7", Basse: "#888" };
+  var PRIO_COLOR = { Urgente: "#A32D2D", Haute: "#BA7517", Moyenne: "#C8102E", Basse: "#888" };
 
   useEffect(function() {
     sbFetch("taches", { select: "*", filter: "evenement_id=eq." + evtId, order: "created_at.asc" })
@@ -1014,18 +1255,18 @@ function EvtTaches(props) {
   return (
     <div style={{ marginTop: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#2c2c2a" }}>📋 Tâches ({tasks.length})</span>
-        <button onClick={function() { setShowForm(!showForm); }} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid #534AB7", background: showForm ? "#534AB7" : "#fff", color: showForm ? "#fff" : "#534AB7", cursor: "pointer", fontSize: 12 }}>+ Ajouter</button>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>📋 Tâches ({tasks.length})</span>
+        <button onClick={function() { setShowForm(!showForm); }} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid #C8102E", background: showForm ? "#C8102E" : "#fff", color: showForm ? "#fff" : "#C8102E", cursor: "pointer", fontSize: 12 }}>+ Ajouter</button>
       </div>
 
       {showForm && (
         <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
-          <input value={title} onChange={function(e) { setTitle(e.target.value); }} placeholder="Titre de la tâche..." style={{ flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13 }} onKeyDown={function(e) { if (e.key === "Enter") handleAdd(); }} />
-          <select value={priorite} onChange={function(e) { setPriorite(e.target.value); }} style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 12 }}>
+          <input value={title} onChange={function(e) { setTitle(e.target.value); }} placeholder="Titre de la tâche..." style={{ flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #d0d0d0", fontSize: 13 }} onKeyDown={function(e) { if (e.key === "Enter") handleAdd(); }} />
+          <select value={priorite} onChange={function(e) { setPriorite(e.target.value); }} style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #d0d0d0", fontSize: 12 }}>
             {["Urgente","Haute","Moyenne","Basse"].map(function(p) { return <option key={p}>{p}</option>; })}
           </select>
-          <button onClick={handleAdd} style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
-          <button onClick={function() { setShowForm(false); setTitle(""); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#888" }}>✕</button>
+          <button onClick={handleAdd} style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
+          <button onClick={function() { setShowForm(false); setTitle(""); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#888" }}>✕</button>
         </div>
       )}
 
@@ -1036,9 +1277,9 @@ function EvtTaches(props) {
           var color = PRIO_COLOR[t.priorite] || "#888";
           var isDone = t.statut === "Confirme";
           return (
-            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: isDone ? "#f7f5f0" : "#fff", borderRadius: 8, border: "1px solid #e8e6de" }}>
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: isDone ? "#f4f4f4" : "#fff", borderRadius: 8, border: "1px solid #e0e0e0" }}>
               <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />
-              <span style={{ flex: 1, fontSize: 13, color: isDone ? "#aaa" : "#2c2c2a", textDecoration: isDone ? "line-through" : "none" }}>{t.titre}</span>
+              <span style={{ flex: 1, fontSize: 13, color: isDone ? "#aaa" : "#1a1a1a", textDecoration: isDone ? "line-through" : "none" }}>{t.titre}</span>
               <button onClick={function() { changeStatut(t, "Confirme"); }} style={{ padding: "2px 8px", borderRadius: 12, border: "1px solid " + (isDone ? "#1D9E75" : "#ddd"), background: isDone ? "#1D9E7522" : "#fff", color: isDone ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 11, fontWeight: isDone ? 600 : 400 }}>✅ Confirmé</button>
               <button onClick={function() { changeStatut(t, "En attente"); }} style={{ padding: "2px 8px", borderRadius: 12, border: "1px solid " + (t.statut === "En attente" ? "#BA7517" : "#ddd"), background: t.statut === "En attente" ? "#BA751722" : "#fff", color: t.statut === "En attente" ? "#BA7517" : "#888", cursor: "pointer", fontSize: 11, fontWeight: t.statut === "En attente" ? 600 : 400 }}>⏳ En attente</button>
               <button onClick={function() { deleteTask(t); }} style={{ padding: "2px 6px", borderRadius: 6, border: "none", background: "transparent", color: "#E24B4A", cursor: "pointer", fontSize: 13 }}>🗑️</button>
@@ -1090,11 +1331,11 @@ function DupCalendar(props) {
   for (var d = 1; d <= daysInMonth; d++) cells.push(d);
 
   return (
-    <div style={{ border: "1px solid #e8e6de", borderRadius: 10, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f7f5f0", borderBottom: "1px solid #e8e6de" }}>
-        <button onClick={prevMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>‹</button>
+    <div style={{ border: "1px solid #e0e0e0", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "#f4f4f4", borderBottom: "1px solid #e0e0e0" }}>
+        <button onClick={prevMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>‹</button>
         <span style={{ fontWeight: 700, fontSize: 14 }}>{MONTHS[month]} {year}</span>
-        <button onClick={nextMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>›</button>
+        <button onClick={nextMonth} style={{ padding: "4px 12px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 16, lineHeight: 1 }}>›</button>
       </div>
       <div style={{ padding: "8px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
@@ -1114,8 +1355,8 @@ function DupCalendar(props) {
                 style={{
                   textAlign: "center", padding: "7px 2px", fontSize: 13,
                   cursor: isPast ? "not-allowed" : "pointer",
-                  color: isPast ? "#ddd" : isSelected ? "#fff" : "#2c2c2a",
-                  background: isSelected ? "#534AB7" : "transparent",
+                  color: isPast ? "#ddd" : isSelected ? "#fff" : "#1a1a1a",
+                  background: isSelected ? "#C8102E" : "transparent",
                   borderRadius: 6,
                   fontWeight: isSelected ? 700 : 400,
                   userSelect: "none",
@@ -1313,7 +1554,7 @@ function Evenements() {
 
   var MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
   var DAYS_FR = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
-  var STATUT_EVT_COLOR = { Planifie: "#534AB7", "En cours": "#185FA5", Termine: "#1D9E75", Annule: "#A32D2D" };
+  var STATUT_EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
 
   if (loading) return <Spinner />;
 
@@ -1321,9 +1562,9 @@ function Evenements() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Toolbar */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-        <div style={{ display: "flex", gap: 4, background: "#f0ede6", borderRadius: 8, padding: 3 }}>
-          <button onClick={function() { setView("liste"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "liste" ? "#fff" : "transparent", color: view === "liste" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "liste" ? 600 : 400, boxShadow: view === "liste" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>☰ Liste</button>
-          <button onClick={function() { setView("calendrier"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "calendrier" ? "#fff" : "transparent", color: view === "calendrier" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "calendrier" ? 600 : 400, boxShadow: view === "calendrier" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>📅 Calendrier</button>
+        <div style={{ display: "flex", gap: 4, background: "#e8e8e8", borderRadius: 8, padding: 3 }}>
+          <button onClick={function() { setView("liste"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "liste" ? "#fff" : "transparent", color: view === "liste" ? "#C8102E" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "liste" ? 600 : 400, boxShadow: view === "liste" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>☰ Liste</button>
+          <button onClick={function() { setView("calendrier"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "calendrier" ? "#fff" : "transparent", color: view === "calendrier" ? "#C8102E" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "calendrier" ? 600 : 400, boxShadow: view === "calendrier" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>📅 Calendrier</button>
         </div>
         <button onClick={function() { openModalForDate(""); }} style={btnA}>+ Ajouter</button>
       </div>
@@ -1340,12 +1581,12 @@ function Evenements() {
             var isOpen = detailEvt === e.id;
             var color = STATUT_EVT_COLOR[e.statut] || "#888";
             return (
-              <div key={e.id} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, overflow: "hidden" }}>
+              <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12 }}>
                   <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
                     <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "#2c2c2a" }}>{e.titre}</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
                       <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
                     {e.confirmation_statut && <span style={{ fontSize: 11, background: e.confirmation_statut === "Confirme" ? "#1D9E7522" : "#BA751722", color: e.confirmation_statut === "Confirme" ? "#1D9E75" : "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{e.confirmation_statut === "Confirme" ? "✅ Confirmé" : "⏳ En attente"}</span>}
                     </div>
@@ -1358,13 +1599,13 @@ function Evenements() {
   sbFetch("evenement_coaches", { select: "coach_id", filter: "evenement_id=eq." + e.id })
     .then(function(rows) { setEditEvtCoaches(rows.map(function(r) { return r.coach_id; })); });
   setEditEvtModal(true);
-}} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#666", flexShrink: 0 }}>✏️</button>
-                  <button onClick={function(ev) { ev.stopPropagation(); duplicateEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#534AB7", flexShrink: 0 }}>📋 Dupliquer</button>
+}} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#444", flexShrink: 0 }}>✏️</button>
+                  <button onClick={function(ev) { ev.stopPropagation(); duplicateEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#C8102E", flexShrink: 0 }}>📋 Dupliquer</button>
                   <button onClick={function(ev) { ev.stopPropagation(); deleteEvt(e); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #E24B4A44", background: "#fff", cursor: "pointer", fontSize: 12, color: "#E24B4A", flexShrink: 0 }}>🗑️</button>
                   <span onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ color: "#ccc", cursor: "pointer" }}>{isOpen ? "▲" : "▼"}</span>
                 </div>
                 {isOpen && (
-                  <div style={{ borderTop: "1px solid #f0ede6", padding: "12px 16px", background: "#fafaf8" }}>
+                  <div style={{ borderTop: "1px solid #e8e8e8", padding: "12px 16px", background: "#fafaf8" }}>
                     {parts.length === 0 && evtCoaches.length === 0 ? <div style={{ fontSize: 13, color: "#aaa" }}>Aucun partenaire ou coach lié</div> : (
                       <div>
                         {parts.length > 0 && <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: evtCoaches.length > 0 ? 10 : 0 }}>
@@ -1376,10 +1617,10 @@ function Evenements() {
                           })}
                         </div>}
                         {evtCoaches.length > 0 && <div>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: "#534AB7", marginBottom: 6 }}>🏉 Coaches assignés</div>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#C8102E", marginBottom: 6 }}>🏉 Coaches assignés</div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                             {evtCoaches.map(function(c) {
-                              return <div key={c.id} style={{ background: "#534AB711", border: "1px solid #534AB744", borderRadius: 8, padding: "6px 12px" }}>
+                              return <div key={c.id} style={{ background: "#C8102E11", border: "1px solid #C8102E44", borderRadius: 8, padding: "6px 12px" }}>
                                 <div style={{ fontSize: 13, fontWeight: 500 }}>{c.prenom} {c.nom}</div>
                                 <div style={{ fontSize: 11, color: "#888" }}>{c.pays || ""}</div>
                               </div>;
@@ -1390,10 +1631,10 @@ function Evenements() {
                     )}
                     {e.responsable_coach_id && (function() {
                       var resp = coaches.find(function(c) { return c.id === e.responsable_coach_id; });
-                      return resp ? <div style={{ fontSize: 13, color: "#534AB7", marginTop: 8, fontWeight: 500 }}>👤 Responsable : {resp.prenom} {resp.nom}</div> : null;
+                      return resp ? <div style={{ fontSize: 13, color: "#C8102E", marginTop: 8, fontWeight: 500 }}>👤 Responsable : {resp.prenom} {resp.nom}</div> : null;
                     })()}
-                    {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 6 }}>{e.notes}</div>}
-                    <div style={{ borderTop: "1px solid #f0ede6", marginTop: 12, paddingTop: 4 }}>
+                    {e.notes && <div style={{ fontSize: 13, color: "#444", marginTop: 6 }}>{e.notes}</div>}
+                    <div style={{ borderTop: "1px solid #e8e8e8", marginTop: 12, paddingTop: 4 }}>
                       <EvtTaches evtId={e.id} />
                     </div>
                   </div>
@@ -1411,15 +1652,15 @@ function Evenements() {
         var days = Array.from({length: cal.daysInMonth}, function(_, i) { return i + 1; });
         var today = new Date();
         return (
-          <div style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 12, overflow: "hidden" }}>
+          <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
             {/* Month nav */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #f0ede6" }}>
-              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month - 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>‹</button>
-              <span style={{ fontWeight: 700, fontSize: 16, color: "#2c2c2a" }}>{MONTHS_FR[cal.month]} {cal.year}</span>
-              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month + 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 16 }}>›</button>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid #e8e8e8" }}>
+              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month - 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 16 }}>‹</button>
+              <span style={{ fontWeight: 700, fontSize: 16, color: "#1a1a1a" }}>{MONTHS_FR[cal.month]} {cal.year}</span>
+              <button onClick={function() { setCurrentMonth(new Date(cal.year, cal.month + 1, 1)); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 16 }}>›</button>
             </div>
             {/* Day headers */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid #f0ede6" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: "1px solid #e8e8e8" }}>
               {DAYS_FR.map(function(d) { return <div key={d} style={{ padding: "8px 4px", textAlign: "center", fontSize: 12, fontWeight: 600, color: "#aaa" }}>{d}</div>; })}
             </div>
             {/* Days grid */}
@@ -1430,10 +1671,10 @@ function Evenements() {
                 var isToday = today.getFullYear() === cal.year && today.getMonth() === cal.month && today.getDate() === day;
                 var dateStr = cal.year + "-" + String(cal.month+1).padStart(2,"0") + "-" + String(day).padStart(2,"0");
                 return (
-                  <div key={day} onClick={function() { openModalForDate(dateStr); }} style={{ minHeight: 80, borderRight: "1px solid #f5f3ee", borderBottom: "1px solid #f5f3ee", padding: "6px 4px", cursor: "pointer", background: isToday ? "#534AB711" : "#fff", transition: "background .15s" }}
-                    onMouseEnter={function(e) { if (!isToday) e.currentTarget.style.background = "#f7f5f0"; }}
-                    onMouseLeave={function(e) { e.currentTarget.style.background = isToday ? "#534AB711" : "#fff"; }}>
-                    <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 400, color: isToday ? "#534AB7" : "#555", textAlign: "right", marginBottom: 4 }}>{isToday ? <span style={{ background: "#534AB7", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{day}</span> : day}</div>
+                  <div key={day} onClick={function() { openModalForDate(dateStr); }} style={{ minHeight: 80, borderRight: "1px solid #f5f3ee", borderBottom: "1px solid #f5f3ee", padding: "6px 4px", cursor: "pointer", background: isToday ? "#C8102E11" : "#fff", transition: "background .15s" }}
+                    onMouseEnter={function(e) { if (!isToday) e.currentTarget.style.background = "#f4f4f4"; }}
+                    onMouseLeave={function(e) { e.currentTarget.style.background = isToday ? "#C8102E11" : "#fff"; }}>
+                    <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 400, color: isToday ? "#C8102E" : "#555", textAlign: "right", marginBottom: 4 }}>{isToday ? <span style={{ background: "#C8102E", color: "#fff", borderRadius: "50%", width: 22, height: 22, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>{day}</span> : day}</div>
                     {evts.slice(0, 3).map(function(e) {
                       var color = STATUT_EVT_COLOR[e.statut] || "#888";
                       return <div key={e.id} onClick={function(ev) { ev.stopPropagation(); setDetailEvt(e.id); setView("liste"); }} style={{ fontSize: 10, background: color + "22", color: color, borderRadius: 4, padding: "2px 4px", marginBottom: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", fontWeight: 500 }}>{e.titre}</div>;
@@ -1473,17 +1714,17 @@ function Evenements() {
             </select>
           </Field>
         </div>
-        <div style={{ borderTop: "1px solid #f0ede6", margin: "12px 0" }} />
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>🏉 Coaches assignés ({editEvtCoaches.length})</div>
+        <div style={{ borderTop: "1px solid #e8e8e8", margin: "12px 0" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#C8102E", marginBottom: 8 }}>🏉 Coaches assignés ({editEvtCoaches.length})</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 180, overflowY: "auto" }}>
           {coaches.map(function(c) {
             var isSel = editEvtCoaches.indexOf(c.id) !== -1;
             return (
-              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: "1px solid " + (isSel ? "#534AB7" : "#e8e6de"), background: isSel ? "#534AB711" : "#fff", cursor: "pointer" }}>
+              <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 10px", borderRadius: 8, border: "1px solid " + (isSel ? "#C8102E" : "#e0e0e0"), background: isSel ? "#C8102E11" : "#fff", cursor: "pointer" }}>
                 <input type="checkbox" checked={isSel} onChange={function() {
                   if (isSel) setEditEvtCoaches(editEvtCoaches.filter(function(id) { return id !== c.id; }));
                   else setEditEvtCoaches(editEvtCoaches.concat([c.id]));
-                }} style={{ accentColor: "#534AB7" }} />
+                }} style={{ accentColor: "#C8102E" }} />
                 <span style={{ fontSize: 13, flex: 1 }}>{c.prenom} {c.nom}</span>
                 <span style={{ fontSize: 11, color: "#aaa" }}>{c.pays}</span>
               </label>
@@ -1493,7 +1734,7 @@ function Evenements() {
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50, marginTop: 12 })} value={editingEvt.notes || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { notes: e.target.value })); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setEditEvtModal(false); }} style={btnS}>Annuler</button>
-          <button onClick={handleUpdateEvt} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 600, opacity: 1 }}>Enregistrer</button>
+          <button onClick={handleUpdateEvt} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 600, opacity: 1 }}>Enregistrer</button>
         </div>
       </Modal>}
 
@@ -1514,12 +1755,12 @@ function Evenements() {
                 <div style={{ fontSize: 13, color: "#bbb", fontStyle: "italic" }}>Aucune date sélectionnée</div>
               ) : (
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 6 }}>{dupDates.length} date{dupDates.length > 1 ? "s" : ""} sélectionnée{dupDates.length > 1 ? "s" : ""}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#C8102E", marginBottom: 6 }}>{dupDates.length} date{dupDates.length > 1 ? "s" : ""} sélectionnée{dupDates.length > 1 ? "s" : ""}</div>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                     {dupDates.slice().sort().map(function(d) {
                       return (
                         <span key={d} onClick={function() { setDupDates(dupDates.filter(function(x) { return x !== d; })); }}
-                          style={{ background: "#534AB7", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 12, cursor: "pointer" }}>
+                          style={{ background: "#C8102E", color: "#fff", borderRadius: 20, padding: "3px 10px", fontSize: 12, cursor: "pointer" }}>
                           {d} ×
                         </span>
                       );
@@ -1529,7 +1770,7 @@ function Evenements() {
               )}
             </div>
 
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16, paddingTop: 14, borderTop: "1px solid #f0ede6" }}>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16, paddingTop: 14, borderTop: "1px solid #e8e8e8" }}>
               <button onClick={function() { setDupModal(false); setDupDates([]); }} style={btnS}>Annuler</button>
               <button onClick={handleConfirmDuplication} disabled={dupDates.length === 0 || dupLoading}
                 style={Object.assign({}, btnP, { opacity: dupDates.length > 0 && !dupLoading ? 1 : 0.5 })}>
@@ -1574,7 +1815,7 @@ function Evenements() {
             </select>
           </Field>
         </div>
-        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
+        <div style={{ borderTop: "1px solid #e8e8e8", margin: "8px 0 14px" }} />
         <div style={{ fontSize: 13, fontWeight: 600, color: "#444", marginBottom: 12 }}>Partenaires liés</div>
         {[{type:"ONG",sel:selectedONG,setSel:setSelectedONG},{type:"Shelter",sel:selectedShelter,setSel:setSelectedShelter},{type:"Ecole",sel:selectedEcole,setSel:setSelectedEcole},{type:"Sponsor",sel:selectedSponsor,setSel:setSelectedSponsor}].map(function(item) {
           return (
@@ -1584,8 +1825,8 @@ function Evenements() {
             </div>
           );
         })}
-        <div style={{ borderTop: "1px solid #f0ede6", margin: "8px 0 14px" }} />
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#534AB7", marginBottom: 8 }}>🏉 Coaches & bénévoles assignés{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
+        <div style={{ borderTop: "1px solid #e8e8e8", margin: "8px 0 14px" }} />
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#C8102E", marginBottom: 8 }}>🏉 Coaches & bénévoles assignés{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
         <CoachMultiSelect coaches={coaches} selected={selectedCoaches} onChange={setSelectedCoaches} />
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50 })} value={form.notes} onChange={function(e) { set("notes", e.target.value); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
@@ -1603,6 +1844,8 @@ function Coaches() {
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
   var ficheState = useState(null); var ficheCoach = ficheState[0]; var setFicheCoach = ficheState[1];
+  var coachEvtsState = useState([]); var coachEvts = coachEvtsState[0]; var setCoachEvts = coachEvtsState[1];
+  var coachEvtsLoadingState = useState(false); var coachEvtsLoading = coachEvtsLoadingState[0]; var setCoachEvtsLoading = coachEvtsLoadingState[1];
   var editModalState = useState(false); var editCoachModal = editModalState[0]; var setEditCoachModal = editModalState[1];
   var editFormState = useState(null); var editCoachForm = editFormState[0]; var setEditCoachForm = editFormState[1];
   var uploadingState = useState(null); var uploadingId = uploadingState[0]; var setUploadingId = uploadingState[1];
@@ -1622,6 +1865,20 @@ function Coaches() {
   useEffect(function() {
     sbFetch("coaches", { select: "*", order: "sessions_completees.desc" }).then(function(r) { setData(r); setLoading(false); });
   }, []);
+
+  useEffect(function() {
+    if (!ficheCoach) { setCoachEvts([]); return; }
+    setCoachEvtsLoading(true);
+    Promise.all([
+      sbFetch("evenement_coaches", { select: "evenement_id", filter: "coach_id=eq." + ficheCoach.id }),
+      sbFetch("evenements", { select: "id,titre,type,date_debut,lieu,statut,confirmation_statut,nombre_enfants_presents,responsable_coach_id", order: "date_debut.desc" }),
+    ]).then(function(r) {
+      var ids = r[0].map(function(x) { return x.evenement_id; });
+      var evts = r[1].filter(function(e) { return ids.indexOf(e.id) >= 0; });
+      setCoachEvts(evts);
+      setCoachEvtsLoading(false);
+    }).catch(function() { setCoachEvtsLoading(false); });
+  }, [ficheCoach && ficheCoach.id]);
 
   function handleAdd() {
     sbInsert("coaches", form).then(function(rows) { setData([rows[0]].concat(data)); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
@@ -1696,7 +1953,7 @@ function Coaches() {
   var showMedals = sortBy === "sessions" && fStatut === "Tous" && fRole === "Tous" && fSport === "Tous" && !search.trim();
   var filtresActifs = fStatut !== "Tous" || fRole !== "Tous" || fSport !== "Tous" || search.trim();
 
-  var miniSel = { padding: "6px 8px", borderRadius: 8, border: "1px solid #ddd", fontSize: 13, background: "#fff" };
+  var miniSel = { padding: "6px 8px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 13, background: "#fff" };
 
   if (loading) return <Spinner />;
 
@@ -1704,15 +1961,15 @@ function Coaches() {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Bandeau de statistiques */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12 }}>
-        <KpiCard label="Coaches" value={data.length} color="#534AB7" />
+        <KpiCard label="Coaches" value={data.length} color="#C8102E" />
         <KpiCard label="Actifs" value={actifs} sub={data.length ? Math.round((actifs / data.length) * 100) + "% de l'effectif" : ""} color="#1D9E75" />
-        <KpiCard label="Sessions complétées" value={totalSessions} color="#185FA5" />
+        <KpiCard label="Sessions complétées" value={totalSessions} color="#9B1C1C" />
         <KpiCard label="Taux moyen" value={avgTaux + "%"} color="#BA7517" />
       </div>
 
       {/* Barre recherche + filtres */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-        <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher (nom, pays, langue)..." style={{ flex: "1 1 220px", minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", fontSize: 14, outline: "none" }} />
+        <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher (nom, pays, langue)..." style={{ flex: "1 1 220px", minWidth: 180, padding: "8px 12px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 14, outline: "none" }} />
         <select value={fStatut} onChange={function(e) { setFStatut(e.target.value); }} style={miniSel}>
           {["Tous", "Actif", "Occasionnel", "Inactif"].map(function(s) { return <option key={s} value={s}>{s === "Tous" ? "Statut : tous" : s}</option>; })}
         </select>
@@ -1728,7 +1985,7 @@ function Coaches() {
           <option value="nom">Tri : nom</option>
           <option value="statut">Tri : statut</option>
         </select>
-        {filtresActifs && <button onClick={function() { setSearch(""); setFStatut("Tous"); setFRole("Tous"); setFSport("Tous"); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 13, color: "#888" }}>✕ Réinitialiser</button>}
+        {filtresActifs && <button onClick={function() { setSearch(""); setFStatut("Tous"); setFRole("Tous"); setFSport("Tous"); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#888" }}>✕ Réinitialiser</button>}
         <button onClick={function() { setModal(true); }} style={Object.assign({}, btnA, { marginLeft: "auto" })}>+ Ajouter</button>
       </div>
 
@@ -1747,15 +2004,15 @@ function Coaches() {
             var color = STATUT_C[c.statut] || "#888780";
             var medal = showMedals ? (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "") : "";
             return (
-              <div key={c.id} onClick={function() { setFicheCoach(c); }} style={{ background: "#fff", border: "1px solid #e8e6de", borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+              <div key={c.id} onClick={function() { setFicheCoach(c); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
                 onMouseEnter={function(e) { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.1)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={function(e) { e.currentTarget.style.boxShadow = "none"; e.currentTarget.style.transform = "none"; }}>
                 {/* Zone photo */}
-                <div style={{ position: "relative", height: 140, background: "linear-gradient(135deg, #534AB711, #185FA511)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ position: "relative", height: 140, background: "linear-gradient(135deg, #1a1a1a, #2d0808)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   {c.photo_url ? (
                     <img src={c.photo_url} alt={c.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   ) : (
-                    <div style={{ width: 72, height: 72, borderRadius: "50%", background: "#534AB722", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#534AB7" }}>
+                    <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(200,16,46,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, color: "#C8102E" }}>
                       {(c.prenom || "?")[0]}{(c.nom || "")[0]}
                     </div>
                   )}
@@ -1771,16 +2028,16 @@ function Coaches() {
                 </div>
                 {/* Infos */}
                 <div style={{ padding: "12px 14px" }}>
-                  <div style={{ fontWeight: 700, fontSize: 15, color: "#2c2c2a" }}>{c.prenom} {c.nom}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: "#1a1a1a" }}>{c.prenom} {c.nom}</div>
                   <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.role} · {c.pays || "—"}</div>
                   {c.langues && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{c.langues}</div>}
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#666", marginBottom: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#444", marginBottom: 4 }}>
                       <span>Sessions</span>
-                      <span style={{ fontWeight: 600, color: "#534AB7" }}>{sessionsTotal}/{sessionsProg}</span>
+                      <span style={{ fontWeight: 600, color: "#C8102E" }}>{sessionsTotal}/{sessionsProg}</span>
                     </div>
-                    <div style={{ background: "#f0ede6", borderRadius: 4, height: 6 }}>
-                      <div style={{ background: "#534AB7", borderRadius: 4, height: 6, width: pct + "%" }} />
+                    <div style={{ background: "#e8e8e8", borderRadius: 4, height: 6 }}>
+                      <div style={{ background: "#C8102E", borderRadius: 4, height: 6, width: pct + "%" }} />
                     </div>
                     <div style={{ fontSize: 11, color: "#aaa", marginTop: 3, textAlign: "right" }}>{pct}% complété</div>
                   </div>
@@ -1797,17 +2054,17 @@ function Coaches() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", justifyContent: "flex-end" }} onClick={function() { setFicheCoach(null); }}>
           <div onClick={function(e) { e.stopPropagation(); }} style={{ background: "#fff", width: "100%", maxWidth: 460, height: "100%", overflowY: "auto", boxShadow: "-4px 0 24px rgba(0,0,0,0.15)" }}>
             {/* En-tête photo */}
-            <div style={{ position: "relative", height: 200, background: "linear-gradient(135deg, #534AB722, #185FA522)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ position: "relative", height: 200, background: "linear-gradient(135deg, #1a1a1a, #2d0808)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {ficheCoach.photo_url ? (
                 <img src={ficheCoach.photo_url} alt={ficheCoach.prenom} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
               ) : (
-                <div style={{ width: 90, height: 90, borderRadius: "50%", background: "#534AB733", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, color: "#534AB7" }}>
+                <div style={{ width: 90, height: 90, borderRadius: "50%", background: "#C8102E33", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, color: "#C8102E" }}>
                   {(ficheCoach.prenom || "?")[0]}{(ficheCoach.nom || "")[0]}
                 </div>
               )}
               <button onClick={function() { setFicheCoach(null); }} style={{ position: "absolute", top: 12, right: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: "50%", width: 32, height: 32, fontSize: 18, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
               <button onClick={function() { setEditCoachForm(Object.assign({}, ficheCoach)); setEditCoachModal(true); }} style={{ position: "absolute", top: 12, left: 12, background: "rgba(0,0,0,0.4)", border: "none", color: "#fff", borderRadius: 20, padding: "5px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>✏️ Modifier</button>
-              <label style={{ position: "absolute", bottom: 12, right: 12, background: "#534AB7", color: "#fff", borderRadius: 20, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
+              <label style={{ position: "absolute", bottom: 12, right: 12, background: "#C8102E", color: "#fff", borderRadius: 20, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
                 📷 Changer la photo
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handlePhotoUpload(ficheCoach.id, e.target.files[0]); }} />
               </label>
@@ -1817,33 +2074,33 @@ function Coaches() {
               <h2 style={{ margin: "0 0 4px", fontSize: 22, fontWeight: 700 }}>{ficheCoach.prenom} {ficheCoach.nom}</h2>
               <div style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>{ficheCoach.role} · {ficheCoach.sport_principal}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>PAYS</div>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{ficheCoach.pays || "—"}</div>
                 </div>
-                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>LANGUES</div>
                   <div style={{ fontSize: 14, fontWeight: 500 }}>{ficheCoach.langues || "—"}</div>
                 </div>
-                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>EMAIL</div>
                   <div style={{ fontSize: 13 }}>{ficheCoach.email || "—"}</div>
                 </div>
-                <div style={{ background: "#f7f5f0", borderRadius: 10, padding: "12px 14px" }}>
+                <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "12px 14px" }}>
                   <div style={{ fontSize: 11, color: "#aaa", marginBottom: 4 }}>TÉLÉPHONE</div>
                   <div style={{ fontSize: 13 }}>{ficheCoach.telephone || "—"}</div>
                 </div>
               </div>
               {/* Sessions */}
-              <div style={{ background: "#534AB711", border: "1px solid #534AB733", borderRadius: 12, padding: "16px" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#534AB7", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Sessions</div>
+              <div style={{ background: "#fff8f8", border: "1px solid #f0c0c0", borderRadius: 12, padding: "16px" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#C8102E", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Sessions</div>
                 <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#534AB7" }}>{ficheCoach.sessions_completees || 0}</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#C8102E" }}>{ficheCoach.sessions_completees || 0}</div>
                     <div style={{ fontSize: 11, color: "#888" }}>Complétées</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#185FA5" }}>{ficheCoach.sessions_programmees || 0}</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#9B1C1C" }}>{ficheCoach.sessions_programmees || 0}</div>
                     <div style={{ fontSize: 11, color: "#888" }}>Programmées</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
@@ -1851,11 +2108,48 @@ function Coaches() {
                     <div style={{ fontSize: 11, color: "#888" }}>Taux</div>
                   </div>
                 </div>
-                <div style={{ background: "#e8e6de", borderRadius: 6, height: 8 }}>
-                  <div style={{ background: "#534AB7", borderRadius: 6, height: 8, width: pctOf(ficheCoach) + "%" }} />
+                <div style={{ background: "#e0e0e0", borderRadius: 6, height: 8 }}>
+                  <div style={{ background: "#C8102E", borderRadius: 6, height: 8, width: pctOf(ficheCoach) + "%" }} />
                 </div>
               </div>
               {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: bgColor(ficheCoach.background_check), fontWeight: 500 }}>✓ Background check : {bgLabel(ficheCoach.background_check)}</div>}
+
+              {/* Événements du coach */}
+              <div style={{ marginTop: 20 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#C8102E", textTransform: "uppercase", letterSpacing: 1, marginBottom: 10 }}>
+                  🏉 Événements ({coachEvts.length})
+                </div>
+                {coachEvtsLoading ? (
+                  <div style={{ fontSize: 13, color: "#aaa", padding: "10px 0" }}>Chargement…</div>
+                ) : coachEvts.length === 0 ? (
+                  <div style={{ fontSize: 13, color: "#aaa", padding: "10px 0" }}>Aucun événement assigné</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {coachEvts.map(function(e) {
+                      var isResp = e.responsable_coach_id === ficheCoach.id;
+                      var CONF_C = { "Confirmé": "#1D9E75", "En attente": "#BA7517", "Annulé": "#993C1D" };
+                      var confColor = CONF_C[e.confirmation_statut] || "#888";
+                      var isPast = e.date_debut && e.date_debut < new Date().toISOString().split("T")[0];
+                      return (
+                        <div key={e.id} style={{ background: isPast ? "#f4f4f4" : "#fff", border: "1px solid " + (isResp ? "#C8102E33" : "#e0e0e0"), borderLeft: isResp ? "3px solid #C8102E" : "3px solid #e0e0e0", borderRadius: 10, padding: "10px 14px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                            <div>
+                              <div style={{ fontWeight: 600, fontSize: 14, color: isPast ? "#aaa" : "#1a1a1a" }}>{e.titre}</div>
+                              <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{e.type} · {e.date_debut} {e.lieu ? "· " + e.lieu : ""}</div>
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                              {e.confirmation_statut && <span style={{ fontSize: 11, fontWeight: 600, color: confColor, background: confColor + "18", padding: "2px 8px", borderRadius: 20 }}>{e.confirmation_statut}</span>}
+                              {isResp && <span style={{ fontSize: 10, fontWeight: 600, color: "#C8102E", background: "#C8102E11", padding: "2px 8px", borderRadius: 20 }}>Responsable</span>}
+                            </div>
+                          </div>
+                          {e.nombre_enfants_presents > 0 && <div style={{ fontSize: 11, color: "#1D9E75", marginTop: 4, fontWeight: 500 }}>👦 {e.nombre_enfants_presents} enfants</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               <DocumentsSection entityType="coach" entityId={ficheCoach.id} />
             </div>
           </div>
@@ -1962,7 +2256,7 @@ var MEMBRES = ["François", "Eric", "Gavin"];
 var PRIORITE_CONFIG = {
   Urgente: { color: "#A32D2D", bg: "#A32D2D22", icon: "🔴" },
   Haute:   { color: "#BA7517", bg: "#BA751722", icon: "🟠" },
-  Moyenne: { color: "#534AB7", bg: "#534AB722", icon: "🔵" },
+  Moyenne: { color: "#C8102E", bg: "#C8102E22", icon: "🔵" },
   Basse:   { color: "#888",    bg: "#88888822", icon: "⚪" },
 };
 
@@ -2033,14 +2327,14 @@ function TachesWidget(props) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#2c2c2a" }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#1a1a1a" }}>
           📋 Tâches à traiter
-          {sorted.length > 0 && <span style={{ marginLeft: 8, background: "#534AB722", color: "#534AB7", borderRadius: 20, padding: "2px 8px", fontSize: 12 }}>{sorted.length}</span>}
+          {sorted.length > 0 && <span style={{ marginLeft: 8, background: "rgba(200,16,46,0.15)", color: "#C8102E", borderRadius: 20, padding: "2px 8px", fontSize: 12 }}>{sorted.length}</span>}
         </h3>
-        <button onClick={onAdd} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Nouvelle tâche</button>
+        <button onClick={onAdd} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Nouvelle tâche</button>
       </div>
       {sorted.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: 13, background: "#f7f5f0", borderRadius: 10 }}>Aucune tâche en cours 🎉</div>
+        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: 13, background: "#f4f4f4", borderRadius: 10 }}>Aucune tâche en cours 🎉</div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {sorted.map(function(t) {
@@ -2048,22 +2342,22 @@ function TachesWidget(props) {
             var isLate = t.date_echeance && t.date_echeance < today;
             var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
             return (
-              <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e0e0e0"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
                 <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{cfg.icon} {t.titre}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{cfg.icon} {t.titre}</span>
                     <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{t.priorite}</span>
                     {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
                   </div>
-                  {(t.description || t._isAction) && <div style={{ fontSize: 13, color: "#666", marginTop: 3 }}>{t._isAction ? t.description : t.description}</div>}
+                  {(t.description || t._isAction) && <div style={{ fontSize: 13, color: "#444", marginTop: 3 }}>{t._isAction ? t.description : t.description}</div>}
                   <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
                     {t.date_echeance && <span style={{ fontSize: 12, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}</span>}
-                    {t.assigne_a && <span style={{ fontSize: 12, color: "#534AB7", fontWeight: 500 }}>→ {t.assigne_a}</span>}
+                    {t.assigne_a && <span style={{ fontSize: 12, color: "#C8102E", fontWeight: 500 }}>→ {t.assigne_a}</span>}
                     {t.assigne_par && <span style={{ fontSize: 12, color: "#888" }}>de {t.assigne_par}</span>}
                     {(part || t.partenaire_nom_temp || t._partNom) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
                     {t._isAction && <span style={{ fontSize: 11, background: "#BA751722", color: "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⏳ Action partenaire</span>}
-                    {t._isEvtTask && <span style={{ fontSize: 11, background: "#185FA522", color: "#185FA5", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
+                    {t._isEvtTask && <span style={{ fontSize: 11, background: "#9B1C1C22", color: "#9B1C1C", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
                   </div>
                 </div>
               </div>
@@ -2157,7 +2451,7 @@ function Taches(props) {
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {terminees.map(function(t) {
               return (
-                <div key={t.id} onClick={function() { handleToggle(t); }} style={{ background: "#fff", border: "1px solid #f0ede6", borderRadius: 10, padding: "10px 14px", display: "flex", gap: 10, cursor: "pointer", opacity: 0.6 }}>
+                <div key={t.id} onClick={function() { handleToggle(t); }} style={{ background: "#fff", border: "1px solid #e8e8e8", borderRadius: 10, padding: "10px 14px", display: "flex", gap: 10, cursor: "pointer", opacity: 0.6 }}>
                   <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1D9E75", border: "2px solid #1D9E75", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                     <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
                   </div>
@@ -2208,25 +2502,25 @@ function Taches(props) {
               <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }} onClick={function() { set("partenaire_id", ""); setSearch(""); }}>×</div>
             )}
             {showDrop && search.length >= 2 && (
-              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e8e6de", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 200, overflowY: "auto" }}>
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 200, overflowY: "auto" }}>
                 {filteredParts.length === 0 ? (
                   <div style={{ padding: "10px 14px" }}>
                     <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>Aucun résultat pour "{search}"</div>
-                    <button onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1px dashed #534AB7", background: "#534AB711", color: "#534AB7", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Créer "{search}" comme nouveau partenaire</button>
+                    <button onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1px dashed #C8102E", background: "#C8102E11", color: "#C8102E", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Créer "{search}" comme nouveau partenaire</button>
                   </div>
                 ) : (
                   <div>
                     {filteredParts.map(function(p) {
                       return (
                         <div key={p.id} onClick={function() { set("partenaire_id", p.id); setSearch(p.nom); setShowDrop(false); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #f5f3ee" }}
-                          onMouseEnter={function(e) { e.currentTarget.style.background = "#f7f5f0"; }}
+                          onMouseEnter={function(e) { e.currentTarget.style.background = "#f4f4f4"; }}
                           onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
                           <span style={{ fontWeight: 500 }}>{p.nom}</span>
                           <span style={{ color: "#aaa", marginLeft: 8, fontSize: 12 }}>{p.type}</span>
                         </div>
                       );
                     })}
-                    <div onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, color: "#534AB7", fontWeight: 500, borderTop: "1px solid #f0ede6" }}>+ Créer nouveau partenaire</div>
+                    <div onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, color: "#C8102E", fontWeight: 500, borderTop: "1px solid #e8e8e8" }}>+ Créer nouveau partenaire</div>
                   </div>
                 )}
               </div>
@@ -2288,14 +2582,12 @@ export default function App() {
     }).catch(function() {});
   }, []);
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f7f5f0" }}>
-      <div style={{ background: "#fff", borderBottom: "1px solid #e8e6de", padding: "0 24px" }}>
+    <div style={{ fontFamily: "system-ui, sans-serif", minHeight: "100vh", background: "#f4f4f4" }}>
+      <div style={{ background: "#1a1a1a", borderBottom: "none", padding: "0 24px" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", alignItems: "center", height: 56 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 32, height: 32, background: "#534AB7", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#fff", fontSize: 16 }}>🏉</span>
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 16, color: "#2c2c2a" }}>Cung Nhau CRM</span>
+            <img src="data:image/png;base64,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" alt="RCN Logo" style={{ height: 40, width: 40, objectFit: "contain", borderRadius: 6 }} />
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#ffffff" }}>Cung Nhau CRM</span>
           </div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
           {notifications.length > 0 && (
@@ -2306,7 +2598,7 @@ export default function App() {
           )}
           <nav style={{ display: "flex", gap: 2 }}>
             {TABS.map(function(t) {
-              return <button key={t.id} onClick={function() { setTab(t.id); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tab === t.id ? "#534AB722" : "transparent", color: tab === t.id ? "#534AB7" : "#666", cursor: "pointer", fontSize: 14, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</button>;
+              return <button key={t.id} onClick={function() { setTab(t.id); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tab === t.id ? "#C8102E" : "transparent", color: tab === t.id ? "#fff" : "rgba(255,255,255,0.65)", cursor: "pointer", fontSize: 14, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</button>;
             })}
           </nav>
           </div>
