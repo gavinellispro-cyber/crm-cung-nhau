@@ -174,10 +174,14 @@ function Dashboard(props) {
       sbFetch("revenus", { select: "*" }),
       sbFetch("coaches", { select: "*", filter: "statut=eq.Actif" }),
       sbFetch("partenaires", { select: "*" }),
-      sbFetch("taches", { select: "*", filter: "statut=neq.Termine", order: "date_echeance.asc" }),
+      sbFetch("taches", { select: "*", filter: "statut=neq.Confirme", order: "date_echeance.asc" }),
       sbFetch("actions_partenaires", { select: "*", filter: "statut=eq.En+attente", order: "date_prevue.asc" }),
     ]).then(function(r) {
-      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: r[5], actions: r[6] });
+      // Split taches: general (no evenement_id) vs event tasks
+      var allTaches = r[5];
+      var tachesGenerales = allTaches.filter(function(t) { return !t.evenement_id; });
+      var tachesEvenements = allTaches.filter(function(t) { return !!t.evenement_id; });
+      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: tachesGenerales, tachesEvt: tachesEvenements, actions: r[6] });
       setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
@@ -193,6 +197,12 @@ function Dashboard(props) {
   function handleDashToggleAction(a) {
     sbUpdate("actions_partenaires", a.id, { statut: "Confirme" }).then(function() {
       setData(Object.assign({}, data, { actions: (data.actions || []).filter(function(x) { return x.id !== a.id; }) }));
+    });
+  }
+
+  function handleDashToggleEvtTask(t) {
+    sbUpdate("taches", t.id, { statut: "Confirme" }).then(function() {
+      setData(Object.assign({}, data, { tachesEvt: (data.tachesEvt || []).filter(function(x) { return x.id !== t.id; }) }));
     });
   }
 
@@ -220,7 +230,7 @@ function Dashboard(props) {
   var sponsors = data.partenaires.filter(function(p) { return p.type === "Sponsor"; });
   var valeur = sponsors.filter(function(s) { return s.statut === "Actif"; }).reduce(function(sum, s) { return sum + Number(s.montant_annuel || 0); }, 0);
 
-  var totalPending = (data.taches || []).length + (data.actions || []).length;
+  var totalPending = (data.taches || []).length + (data.actions || []).length + (data.tachesEvt || []).length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -229,7 +239,7 @@ function Dashboard(props) {
         <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#fff" : "transparent", color: dashView === "taches" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} onAdd={function() { setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} />
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
       </div>
       <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
       <SectionTitle>Activités</SectionTitle>
@@ -896,6 +906,85 @@ function CoachMultiSelect(props) {
   );
 }
 
+// ── TÂCHES ÉVÉNEMENT ─────────────────────────────────────────
+function EvtTaches(props) {
+  var evtId = props.evtId;
+  var tasksState = useState([]); var tasks = tasksState[0]; var setTasks = tasksState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var showFormState = useState(false); var showForm = showFormState[0]; var setShowForm = showFormState[1];
+  var titleState = useState(""); var title = titleState[0]; var setTitle = titleState[1];
+  var prioriteState = useState("Moyenne"); var priorite = prioriteState[0]; var setPriorite = prioriteState[1];
+
+  var PRIO_COLOR = { Urgente: "#A32D2D", Haute: "#BA7517", Moyenne: "#534AB7", Basse: "#888" };
+
+  useEffect(function() {
+    sbFetch("taches", { select: "*", filter: "evenement_id=eq." + evtId, order: "created_at.asc" })
+      .then(function(rows) { setTasks(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, [evtId]);
+
+  function handleAdd() {
+    if (!title.trim()) return;
+    sbInsert("taches", { titre: title, priorite: priorite, statut: "En attente", evenement_id: evtId })
+      .then(function(rows) {
+        setTasks(tasks.concat(rows[0]));
+        setTitle(""); setShowForm(false);
+      }).catch(function(e) { alert(e.message); });
+  }
+
+  function changeStatut(t, s) {
+    sbUpdate("taches", t.id, { statut: s }).then(function() {
+      setTasks(tasks.map(function(x) { return x.id === t.id ? Object.assign({}, x, { statut: s }) : x; }));
+    });
+  }
+
+  function deleteTask(t) {
+    fetch(SUPABASE_URL + "/rest/v1/taches?id=eq." + t.id, {
+      method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+    }).then(function() { setTasks(tasks.filter(function(x) { return x.id !== t.id; })); });
+  }
+
+  if (loading) return <div style={{ fontSize: 13, color: "#aaa", padding: "8px 0" }}>Chargement...</div>;
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#2c2c2a" }}>📋 Tâches ({tasks.length})</span>
+        <button onClick={function() { setShowForm(!showForm); }} style={{ padding: "3px 10px", borderRadius: 6, border: "1px solid #534AB7", background: showForm ? "#534AB7" : "#fff", color: showForm ? "#fff" : "#534AB7", cursor: "pointer", fontSize: 12 }}>+ Ajouter</button>
+      </div>
+
+      {showForm && (
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
+          <input value={title} onChange={function(e) { setTitle(e.target.value); }} placeholder="Titre de la tâche..." style={{ flex: 1, padding: "6px 10px", borderRadius: 6, border: "1px solid #ddd", fontSize: 13 }} onKeyDown={function(e) { if (e.key === "Enter") handleAdd(); }} />
+          <select value={priorite} onChange={function(e) { setPriorite(e.target.value); }} style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid #ddd", fontSize: 12 }}>
+            {["Urgente","Haute","Moyenne","Basse"].map(function(p) { return <option key={p}>{p}</option>; })}
+          </select>
+          <button onClick={handleAdd} style={{ padding: "6px 12px", borderRadius: 6, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 12 }}>OK</button>
+          <button onClick={function() { setShowForm(false); setTitle(""); }} style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#888" }}>✕</button>
+        </div>
+      )}
+
+      {tasks.length === 0 && !showForm && <div style={{ fontSize: 12, color: "#bbb", fontStyle: "italic" }}>Aucune tâche pour cet événement</div>}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {tasks.map(function(t) {
+          var color = PRIO_COLOR[t.priorite] || "#888";
+          var isDone = t.statut === "Confirme";
+          return (
+            <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", background: isDone ? "#f7f5f0" : "#fff", borderRadius: 8, border: "1px solid #e8e6de" }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0, display: "inline-block" }} />
+              <span style={{ flex: 1, fontSize: 13, color: isDone ? "#aaa" : "#2c2c2a", textDecoration: isDone ? "line-through" : "none" }}>{t.titre}</span>
+              <button onClick={function() { changeStatut(t, "Confirme"); }} style={{ padding: "2px 8px", borderRadius: 12, border: "1px solid " + (isDone ? "#1D9E75" : "#ddd"), background: isDone ? "#1D9E7522" : "#fff", color: isDone ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 11, fontWeight: isDone ? 600 : 400 }}>✅ Confirmé</button>
+              <button onClick={function() { changeStatut(t, "En attente"); }} style={{ padding: "2px 8px", borderRadius: 12, border: "1px solid " + (t.statut === "En attente" ? "#BA7517" : "#ddd"), background: t.statut === "En attente" ? "#BA751722" : "#fff", color: t.statut === "En attente" ? "#BA7517" : "#888", cursor: "pointer", fontSize: 11, fontWeight: t.statut === "En attente" ? 600 : 400 }}>⏳ En attente</button>
+              <button onClick={function() { deleteTask(t); }} style={{ padding: "2px 6px", borderRadius: 6, border: "none", background: "transparent", color: "#E24B4A", cursor: "pointer", fontSize: 13 }}>🗑️</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── CALENDRIER DUPLICATION (composant isolé) ─────────────────
 function DupCalendar(props) {
   var dupDates = props.dupDates;
@@ -983,6 +1072,7 @@ function Evenements() {
   var cs = useState([]); var coaches = cs[0]; var setCoaches = cs[1];
   var selCoaches = useState([]); var selectedCoaches = selCoaches[0]; var setSelectedCoaches = selCoaches[1];
   var epMap = useState({}); var evtPartenaires = epMap[0]; var setEvtPartenaires = epMap[1];
+  var ecMap = useState({}); var evtCoachMap = ecMap[0]; var setEvtCoachMap = ecMap[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var viewState = useState("liste"); var view = viewState[0]; var setView = viewState[1];
   var monthState = useState(new Date()); var currentMonth = monthState[0]; var setCurrentMonth = monthState[1];
@@ -1021,6 +1111,12 @@ function Evenements() {
       });
       setEvtPartenaires(map);
       setCoaches(r[3]);
+      var cmap = {};
+      r[4].forEach(function(ec) {
+        if (!cmap[ec.evenement_id]) cmap[ec.evenement_id] = [];
+        cmap[ec.evenement_id].push(ec.coach_id);
+      });
+      setEvtCoachMap(cmap);
       setLoading(false);
     });
   }, []);
@@ -1114,6 +1210,9 @@ function Evenements() {
     })
     .then(function() {
       setData(data.map(function(e) { return e.id === editingEvt.id ? Object.assign({}, e, payload) : e; }));
+      var newCmap = Object.assign({}, evtCoachMap);
+      newCmap[editingEvt.id] = editEvtCoaches;
+      setEvtCoachMap(newCmap);
       setEditEvtModal(false); setEditingEvt(null);
     })
     .catch(function(e) { alert("Erreur: " + e.message); });
@@ -1169,10 +1268,9 @@ function Evenements() {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {data.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : data.map(function(e) {
             var parts = getPartenairesForEvt(e.id);
-            var evtCoachIds = (evtPartenaires[e.id] || []);
+            var evtCoachIds = (evtCoachMap[e.id] || []);
             var evtCoaches = coaches.filter(function(c) {
-              // use evenement_coaches relationship - simplified: coaches assigned
-              return false; // placeholder - will be loaded via separate fetch
+              return evtCoachIds.indexOf(c.id) !== -1;
             });
             var isOpen = detailEvt === e.id;
             var color = STATUT_EVT_COLOR[e.statut] || "#888";
@@ -1230,6 +1328,9 @@ function Evenements() {
                       return resp ? <div style={{ fontSize: 13, color: "#534AB7", marginTop: 8, fontWeight: 500 }}>👤 Responsable : {resp.prenom} {resp.nom}</div> : null;
                     })()}
                     {e.notes && <div style={{ fontSize: 13, color: "#666", marginTop: 6 }}>{e.notes}</div>}
+                    <div style={{ borderTop: "1px solid #f0ede6", marginTop: 12, paddingTop: 4 }}>
+                      <EvtTaches evtId={e.id} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1762,13 +1863,16 @@ function TachesWidget(props) {
   var taches = props.taches || [];
   var partenaires = props.partenaires || [];
   var actions = props.actions || [];
+  var tachesEvt = props.tachesEvt || [];
+  var evenements = props.evenements || [];
   var onAdd = props.onAdd;
   var onToggle = props.onToggle;
   var onToggleAction = props.onToggleAction || function() {};
+  var onToggleEvtTask = props.onToggleEvtTask || function() {};
 
   var PRIORITE_ACTION = { "Visite terrain": "Haute", "RDV": "Haute", "Appel": "Moyenne", "Email": "Moyenne", "Autre": "Basse" };
 
-  // Convert actions to task-like objects
+  // Convert actions partenaires to task-like objects
   var actionsTasks = actions.map(function(a) {
     var part = partenaires.find(function(p) { return p.id === a.partenaire_id; });
     return {
@@ -1785,7 +1889,23 @@ function TachesWidget(props) {
     };
   });
 
-  var allItems = taches.concat(actionsTasks);
+  // Convert event tasks to task-like objects
+  var evtTasks = tachesEvt.map(function(t) {
+    var evt = evenements.find(function(e) { return e.id === t.evenement_id; });
+    return {
+      id: "evttask_" + t.id,
+      _isEvtTask: true,
+      _originalId: t.id,
+      titre: t.titre,
+      description: evt ? ("📅 " + evt.titre) : "",
+      priorite: t.priorite || "Moyenne",
+      date_echeance: t.date_echeance || (evt ? evt.date_debut ? evt.date_debut.split("T")[0] : null : null),
+      _evtNom: evt ? evt.titre : "",
+      statut: t.statut,
+    };
+  });
+
+  var allItems = taches.concat(actionsTasks).concat(evtTasks);
 
   var sorted = allItems.slice().sort(function(a, b) {
     var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
@@ -1819,7 +1939,7 @@ function TachesWidget(props) {
             var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
             return (
               <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
+                <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{cfg.icon} {t.titre}</span>
@@ -1833,6 +1953,7 @@ function TachesWidget(props) {
                     {t.assigne_par && <span style={{ fontSize: 12, color: "#888" }}>de {t.assigne_par}</span>}
                     {(part || t.partenaire_nom_temp || t._partNom) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
                     {t._isAction && <span style={{ fontSize: 11, background: "#BA751722", color: "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⏳ Action partenaire</span>}
+                    {t._isEvtTask && <span style={{ fontSize: 11, background: "#185FA522", color: "#185FA5", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
                   </div>
                 </div>
               </div>
