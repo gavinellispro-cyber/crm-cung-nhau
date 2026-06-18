@@ -974,6 +974,38 @@ function Partenaires() {
     }).catch(function(e) { alert(e.message); setConverting(false); });
   }
 
+  var exportPanelState = useState(false); var exportPanel = exportPanelState[0]; var setExportPanel = exportPanelState[1];
+  var exportTargetState = useState("tous"); var exportTarget = exportTargetState[0]; var setExportTarget = exportTargetState[1];
+
+  function handleExportContacts() {
+    var rows, filename;
+    if (exportTarget === "prospects") {
+      var header = ["Nom","Prénom","Civilité","Organisation","Poste","Email","Téléphone","Ville","Adresse","Type CSV"];
+      rows = CSV_PROSPECTS
+        .filter(function(p) { return !isConverted(p).done; })
+        .map(function(p) {
+          return [p.nom, p.prenom, p.civilite, p.organisation, p.job, p.email||"", p.tel||"", p.ville, p.adresse, p.type_csv]
+            .map(function(v) { return '"' + String(v||"").replace(/"/g,'""') + '"'; }).join(",");
+        });
+      filename = "prospects_rcn.csv";
+    } else {
+      var header = ["Nom","Type","Contact","Email","Téléphone","Ville","District","Adresse","Statut","Nb Enfants","Montant Annuel","Notes"];
+      var src = exportTarget === "tous" ? data : data.filter(function(p) { return p.type === exportTarget; });
+      rows = src.map(function(p) {
+        return [p.nom, p.type, p.contact_nom, p.contact_email, p.contact_tel, p.ville||p.district, p.district, p.adresse, p.statut, p.nombre_enfants, p.montant_annuel, p.notes]
+          .map(function(v) { return '"' + String(v||"").replace(/"/g,'""') + '"'; }).join(",");
+      });
+      filename = "partenaires_" + (exportTarget === "tous" ? "tous" : exportTarget.toLowerCase()) + "_rcn.csv";
+    }
+    if (!rows.length) { alert("Aucun contact à exporter."); return; }
+    var csv = [header.join(",")].concat(rows).join("\n");
+    var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    setExportPanel(false);
+  }
+
   // Détection persistante : un prospect est converti s'il existe déjà en base
   // (match par email OU par contact_nom exact) ou converti dans cette session
   function isConverted(p) {
@@ -1022,12 +1054,43 @@ function Partenaires() {
             🎯 Prospects <span style={{ background: filtre === "Prospects" ? "rgba(255,255,255,0.25)" : PROSPECT_COLOR + "22", color: filtre === "Prospects" ? "#fff" : PROSPECT_COLOR, borderRadius: 20, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>{totalNonConverts}</span>
           </button>
         </div>
-        {filtre !== "Prospects" && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 13, color: "#888" }}>{filtered.length} partenaire{filtered.length > 1 ? "s" : ""}</span>
-            <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+          {/* Export CSV */}
+          <button onClick={function() { setExportPanel(!exportPanel); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: exportPanel ? "#1a1a1a" : "#fff", color: exportPanel ? "#fff" : "#444", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>⬇ Export CSV</button>
+          {exportPanel && (
+            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, minWidth: 300 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12 }}>Exporter les contacts</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+                {[
+                  { key: "tous", label: "Tous les partenaires", count: data.length },
+                  { key: "ONG", label: "🤝 ONG", count: data.filter(function(p){return p.type==="ONG";}).length },
+                  { key: "Shelter", label: "🏠 Shelters", count: data.filter(function(p){return p.type==="Shelter";}).length },
+                  { key: "Ecole", label: "🏫 Écoles", count: data.filter(function(p){return p.type==="Ecole";}).length },
+                  { key: "Sponsor", label: "💼 Sponsors", count: data.filter(function(p){return p.type==="Sponsor";}).length },
+                  { key: "prospects", label: "🎯 Prospects CSV", count: CSV_PROSPECTS.filter(function(p){return !isConverted(p).done;}).length },
+                ].map(function(opt) {
+                  var active = exportTarget === opt.key;
+                  return (
+                    <button key={opt.key} onClick={function() { setExportTarget(opt.key); }} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: 8, border: "2px solid " + (active ? "#C8102E" : "#e0e0e0"), background: active ? "#C8102E11" : "#fafafa", cursor: "pointer", fontSize: 13, fontWeight: active ? 600 : 400, color: active ? "#C8102E" : "#444" }}>
+                      <span>{opt.label}</span>
+                      <span style={{ fontSize: 11, color: active ? "#C8102E" : "#aaa", fontWeight: 600 }}>{opt.count} contact{opt.count > 1 ? "s" : ""}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={function() { setExportPanel(false); }} style={Object.assign({}, btnS, { flex: 1, fontSize: 13 })}>Annuler</button>
+                <button onClick={handleExportContacts} style={Object.assign({}, btnP, { flex: 2, fontSize: 13 })}>⬇ Télécharger</button>
+              </div>
+            </div>
+          )}
+          {filtre !== "Prospects" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13, color: "#888" }}>{filtered.length} partenaire{filtered.length > 1 ? "s" : ""}</span>
+              <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* VUE PROSPECTS */}
@@ -1606,6 +1669,66 @@ function Evenements() {
   var DAYS_FR = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
   var STATUT_EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
 
+  // Export CSV
+  var exportPanelState = useState(false); var exportPanel = exportPanelState[0]; var setExportPanel = exportPanelState[1];
+  var now = new Date();
+  var exportMoisState = useState(now.getMonth()); var exportMois = exportMoisState[0]; var setExportMois = exportMoisState[1];
+  var exportAnneeState = useState(now.getFullYear()); var exportAnnee = exportAnneeState[0]; var setExportAnnee = exportAnneeState[1];
+  var exportModeState = useState("mois"); var exportMode = exportModeState[0]; var setExportMode = exportModeState[1];
+
+  var ANNEES = (function() {
+    var years = []; var y = now.getFullYear();
+    for (var i = y - 2; i <= y + 1; i++) years.push(i);
+    return years;
+  })();
+
+  function buildCSV(evts) {
+    var header = ["Titre","Type","Date","Lieu","Statut","Confirmation","Enfants","Notes","Partenaires","Coaches"];
+    var rows = evts.map(function(e) {
+      var parts = getPartenairesForEvt(e.id).map(function(p) { return p.nom; }).join(" | ");
+      var evtCoachIds = evtCoachMap[e.id] || [];
+      var coachs = coaches.filter(function(c) { return evtCoachIds.indexOf(c.id) !== -1; }).map(function(c) { return c.prenom + " " + c.nom; }).join(" | ");
+      return [
+        e.titre || "",
+        e.type || "",
+        e.date_debut ? e.date_debut.split("T")[0] : "",
+        e.lieu || "",
+        e.statut || "",
+        e.confirmation_statut || "",
+        e.nombre_enfants_presents || "",
+        (e.notes || "").replace(/\n/g, " "),
+        parts,
+        coachs,
+      ].map(function(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
+    });
+    return [header.join(",")].concat(rows).join("\n");
+  }
+
+  function downloadCSV(content, filename) {
+    var blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleExport() {
+    var evts;
+    var filename;
+    if (exportMode === "mois") {
+      var pad = String(exportMois + 1).padStart(2, "0");
+      var prefix = exportAnnee + "-" + pad;
+      evts = data.filter(function(e) { return e.date_debut && e.date_debut.startsWith(prefix); });
+      filename = "evenements_" + MONTHS_FR[exportMois].toLowerCase() + "_" + exportAnnee + ".csv";
+    } else {
+      evts = data.filter(function(e) { return e.date_debut && e.date_debut.startsWith(String(exportAnnee)); });
+      filename = "evenements_" + exportAnnee + ".csv";
+    }
+    if (!evts.length) { alert("Aucun événement pour cette période."); return; }
+    downloadCSV(buildCSV(evts), filename);
+    setExportPanel(false);
+  }
+
   if (loading) return <Spinner />;
 
   return (
@@ -1616,7 +1739,54 @@ function Evenements() {
           <button onClick={function() { setView("liste"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "liste" ? "#fff" : "transparent", color: view === "liste" ? "#C8102E" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "liste" ? 600 : 400, boxShadow: view === "liste" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>☰ Liste</button>
           <button onClick={function() { setView("calendrier"); }} style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: view === "calendrier" ? "#fff" : "transparent", color: view === "calendrier" ? "#C8102E" : "#888", cursor: "pointer", fontSize: 13, fontWeight: view === "calendrier" ? 600 : 400, boxShadow: view === "calendrier" ? "0 1px 3px rgba(0,0,0,0.1)" : "none" }}>📅 Calendrier</button>
         </div>
-        <button onClick={function() { openModalForDate(""); }} style={btnA}>+ Ajouter</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", position: "relative" }}>
+          {/* Bouton export */}
+          <button onClick={function() { setExportPanel(!exportPanel); }} style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: exportPanel ? "#1a1a1a" : "#fff", color: exportPanel ? "#fff" : "#444", cursor: "pointer", fontSize: 13, fontWeight: 500, display: "flex", alignItems: "center", gap: 6 }}>
+            ⬇ Export CSV
+          </button>
+          {/* Panneau export */}
+          {exportPanel && (
+            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: 16, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 200, minWidth: 280 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12 }}>Exporter les événements</div>
+              {/* Mode */}
+              <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                {["mois","annee"].map(function(m) {
+                  return <button key={m} onClick={function() { setExportMode(m); }} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "2px solid " + (exportMode === m ? "#C8102E" : "#e0e0e0"), background: exportMode === m ? "#C8102E" : "#fff", color: exportMode === m ? "#fff" : "#555", cursor: "pointer", fontSize: 12, fontWeight: exportMode === m ? 600 : 400 }}>{m === "mois" ? "Par mois" : "Par année"}</button>;
+                })}
+              </div>
+              {/* Sélecteurs */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+                {exportMode === "mois" && (
+                  <select value={exportMois} onChange={function(e) { setExportMois(Number(e.target.value)); }} style={Object.assign({}, sel, { flex: 2 })}>
+                    {MONTHS_FR.map(function(m, i) { return <option key={i} value={i}>{m}</option>; })}
+                  </select>
+                )}
+                <select value={exportAnnee} onChange={function(e) { setExportAnnee(Number(e.target.value)); }} style={Object.assign({}, sel, { flex: 1 })}>
+                  {ANNEES.map(function(y) { return <option key={y} value={y}>{y}</option>; })}
+                </select>
+              </div>
+              {/* Résumé */}
+              <div style={{ fontSize: 11, color: "#888", marginBottom: 12 }}>
+                {(function() {
+                  var count;
+                  if (exportMode === "mois") {
+                    var pad = String(exportMois + 1).padStart(2, "0");
+                    count = data.filter(function(e) { return e.date_debut && e.date_debut.startsWith(exportAnnee + "-" + pad); }).length;
+                    return count + " événement" + (count > 1 ? "s" : "") + " en " + MONTHS_FR[exportMois] + " " + exportAnnee;
+                  } else {
+                    count = data.filter(function(e) { return e.date_debut && e.date_debut.startsWith(String(exportAnnee)); }).length;
+                    return count + " événement" + (count > 1 ? "s" : "") + " en " + exportAnnee;
+                  }
+                })()}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={function() { setExportPanel(false); }} style={Object.assign({}, btnS, { flex: 1, fontSize: 13 })}>Annuler</button>
+                <button onClick={handleExport} style={Object.assign({}, btnP, { flex: 2, fontSize: 13 })}>⬇ Télécharger</button>
+              </div>
+            </div>
+          )}
+          <button onClick={function() { openModalForDate(""); }} style={btnA}>+ Ajouter</button>
+        </div>
       </div>
 
       {/* LISTE VIEW */}
