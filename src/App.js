@@ -159,7 +159,9 @@ function PartenaireMultiSelect(props) {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
-function Dashboard() {
+function Dashboard(props) {
+  var setTab = props.setTab || function() {};
+  var setOpenTacheModal = props.setOpenTacheModal || function() {};
   var s = useState(null); var data = s[0]; var setData = s[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
 
@@ -171,8 +173,9 @@ function Dashboard() {
       sbFetch("coaches", { select: "*", filter: "statut=eq.Actif" }),
       sbFetch("partenaires", { select: "*" }),
       sbFetch("taches", { select: "*", filter: "statut=neq.Termine", order: "date_echeance.asc" }),
+      sbFetch("actions_partenaires", { select: "*", filter: "statut=eq.En+attente", order: "date_prevue.asc" }),
     ]).then(function(r) {
-      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: r[5] });
+      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: r[5], actions: r[6] });
       setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
@@ -182,6 +185,12 @@ function Dashboard() {
   function handleDashToggle(t) {
     sbUpdate("taches", t.id, { statut: "Termine" }).then(function() {
       setData(Object.assign({}, data, { taches: data.taches.filter(function(x) { return x.id !== t.id; }) }));
+    });
+  }
+
+  function handleDashToggleAction(a) {
+    sbUpdate("actions_partenaires", a.id, { statut: "Confirme" }).then(function() {
+      setData(Object.assign({}, data, { actions: (data.actions || []).filter(function(x) { return x.id !== a.id; }) }));
     });
   }
 
@@ -239,7 +248,7 @@ function Dashboard() {
       </div>
 
       <div style={{ borderTop: "2px solid #e8e6de", paddingTop: 20, marginTop: 8 }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} onAdd={function() {}} onToggle={handleDashToggle} />
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} onAdd={function() { setOpenTacheModal(true); setTab("taches"); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} />
       </div>
     </div>
   );
@@ -1738,13 +1747,35 @@ var PRIORITE_CONFIG = {
 };
 
 function TachesWidget(props) {
-  // Used in dashboard - shows all non-terminated tasks
   var taches = props.taches || [];
   var partenaires = props.partenaires || [];
+  var actions = props.actions || [];
   var onAdd = props.onAdd;
   var onToggle = props.onToggle;
+  var onToggleAction = props.onToggleAction || function() {};
 
-  var sorted = taches.slice().sort(function(a, b) {
+  var PRIORITE_ACTION = { "Visite terrain": "Haute", "RDV": "Haute", "Appel": "Moyenne", "Email": "Moyenne", "Autre": "Basse" };
+
+  // Convert actions to task-like objects
+  var actionsTasks = actions.map(function(a) {
+    var part = partenaires.find(function(p) { return p.id === a.partenaire_id; });
+    return {
+      id: "action_" + a.id,
+      _isAction: true,
+      _originalId: a.id,
+      titre: a.type + " — " + (part ? part.nom : "Partenaire"),
+      description: a.titre,
+      priorite: PRIORITE_ACTION[a.type] || "Moyenne",
+      date_echeance: a.date_prevue,
+      partenaire_id: a.partenaire_id,
+      _partNom: part ? part.nom : "",
+      statut: "A faire",
+    };
+  });
+
+  var allItems = taches.concat(actionsTasks);
+
+  var sorted = allItems.slice().sort(function(a, b) {
     var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
     var pa = pOrder[a.priorite] !== undefined ? pOrder[a.priorite] : 4;
     var pb = pOrder[b.priorite] !== undefined ? pOrder[b.priorite] : 4;
@@ -1776,19 +1807,20 @@ function TachesWidget(props) {
             var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
             return (
               <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div onClick={function() { onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
+                <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{cfg.icon} {t.titre}</span>
                     <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{t.priorite}</span>
                     {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
                   </div>
-                  {t.description && <div style={{ fontSize: 13, color: "#666", marginTop: 3 }}>{t.description}</div>}
+                  {(t.description || t._isAction) && <div style={{ fontSize: 13, color: "#666", marginTop: 3 }}>{t._isAction ? t.description : t.description}</div>}
                   <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
                     {t.date_echeance && <span style={{ fontSize: 12, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}</span>}
                     {t.assigne_a && <span style={{ fontSize: 12, color: "#534AB7", fontWeight: 500 }}>→ {t.assigne_a}</span>}
                     {t.assigne_par && <span style={{ fontSize: 12, color: "#888" }}>de {t.assigne_par}</span>}
-                    {(part || t.partenaire_nom_temp) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : t.partenaire_nom_temp}</span>}
+                    {(part || t.partenaire_nom_temp || t._partNom) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
+                    {t._isAction && <span style={{ fontSize: 11, background: "#BA751722", color: "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⏳ Action partenaire</span>}
                   </div>
                 </div>
               </div>
@@ -1800,11 +1832,15 @@ function TachesWidget(props) {
   );
 }
 
-function Taches() {
+function Taches(props) {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
   var ps = useState([]); var partenaires = ps[0]; var setPartenaires = ps[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
-  var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
+  var ms = useState(props.openModal || false); var modal = ms[0]; var setModal = ms[1];
+
+  useEffect(function() {
+    if (props.openModal) { setModal(true); if (props.setOpenModal) props.setOpenModal(false); }
+  }, [props.openModal]);
 
   var EMPTY = { titre: "", description: "", priorite: "Moyenne", statut: "A faire", date_echeance: "", assigne_par: "", assigne_a: "", partenaire_id: "", partenaire_nom_temp: "", nouveau_partenaire: false, nouveau_partenaire_nom: "" };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
@@ -1994,6 +2030,7 @@ var TABS = [
 
 export default function App() {
   var ts = useState("dashboard"); var tab = ts[0]; var setTab = ts[1];
+  var otm = useState(false); var openTacheModal = otm[0]; var setOpenTacheModal = otm[1];
   var notifState = useState([]); var notifications = notifState[0]; var setNotifications = notifState[1];
 
   useEffect(function() {
@@ -2033,11 +2070,11 @@ export default function App() {
         </div>
       </div>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px" }}>
-        {tab === "dashboard" && <Dashboard />}
+        {tab === "dashboard" && <Dashboard setTab={setTab} setOpenTacheModal={setOpenTacheModal} />}
         {tab === "partenaires" && <Partenaires />}
         {tab === "evenements" && <Evenements />}
         {tab === "coaches" && <Coaches />}
-        {tab === "taches" && <Taches />}
+        {tab === "taches" && <Taches openModal={openTacheModal} setOpenModal={setOpenTacheModal} />}
       </div>
     </div>
   );
