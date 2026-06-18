@@ -1908,14 +1908,17 @@ function TachesWidget(props) {
   var allItems = taches.concat(actionsTasks).concat(evtTasks);
 
   var sorted = allItems.slice().sort(function(a, b) {
+    // Date d'abord, puis priorité
+    var hasA = !!a.date_echeance; var hasB = !!b.date_echeance;
+    if (hasA && hasB) {
+      if (a.date_echeance !== b.date_echeance) return a.date_echeance > b.date_echeance ? 1 : -1;
+    } else if (hasA) return -1;
+    else if (hasB) return 1;
+    // Même date ou pas de date : trier par priorité
     var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
     var pa = pOrder[a.priorite] !== undefined ? pOrder[a.priorite] : 4;
     var pb = pOrder[b.priorite] !== undefined ? pOrder[b.priorite] : 4;
-    if (pa !== pb) return pa - pb;
-    if (a.date_echeance && b.date_echeance) return a.date_echeance > b.date_echeance ? 1 : -1;
-    if (a.date_echeance) return -1;
-    if (b.date_echeance) return 1;
-    return 0;
+    return pa - pb;
   });
 
   var today = new Date().toISOString().split("T")[0];
