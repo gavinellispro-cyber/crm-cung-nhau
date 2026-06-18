@@ -1428,7 +1428,7 @@ function Evenements() {
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50, marginTop: 12 })} value={editingEvt.notes || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { notes: e.target.value })); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setEditEvtModal(false); }} style={btnS}>Annuler</button>
-          <button onClick={handleUpdateEvt} style={btnP}>Enregistrer</button>
+          <button onClick={handleUpdateEvt} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 15, fontWeight: 600, opacity: 1 }}>Enregistrer</button>
         </div>
       </Modal>}
 
