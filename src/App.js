@@ -170,12 +170,20 @@ function Dashboard() {
       sbFetch("revenus", { select: "*" }),
       sbFetch("coaches", { select: "*", filter: "statut=eq.Actif" }),
       sbFetch("partenaires", { select: "*" }),
-      sbFetch("taches", { select: "*" }),
+      sbFetch("taches", { select: "*", filter: "statut=neq.Termine", order: "date_echeance.asc" }),
     ]).then(function(r) {
       setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: r[5] });
       setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
+
+  var dashToggleTache = useState([]); var toggledTaches = dashToggleTache[0]; var setToggledTaches = dashToggleTache[1];
+
+  function handleDashToggle(t) {
+    sbUpdate("taches", t.id, { statut: "Termine" }).then(function() {
+      setData(Object.assign({}, data, { taches: data.taches.filter(function(x) { return x.id !== t.id; }) }));
+    });
+  }
 
   var aattState = useState(0); var actionsEnAttente = aattState[0]; var setActionsEnAttente = aattState[1];
   useEffect(function() {
@@ -228,6 +236,10 @@ function Dashboard() {
         <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
         <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
         <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
+      </div>
+
+      <div style={{ borderTop: "2px solid #e8e6de", paddingTop: 20, marginTop: 8 }}>
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} onAdd={function() {}} onToggle={handleDashToggle} />
       </div>
     </div>
   );
@@ -1717,57 +1729,256 @@ function Coaches() {
 }
 
 // ── TÂCHES ────────────────────────────────────────────────────
+var MEMBRES = ["François", "Eric", "Gavin"];
+var PRIORITE_CONFIG = {
+  Urgente: { color: "#A32D2D", bg: "#A32D2D22", icon: "🔴" },
+  Haute:   { color: "#BA7517", bg: "#BA751722", icon: "🟠" },
+  Moyenne: { color: "#534AB7", bg: "#534AB722", icon: "🔵" },
+  Basse:   { color: "#888",    bg: "#88888822", icon: "⚪" },
+};
+
+function TachesWidget(props) {
+  // Used in dashboard - shows all non-terminated tasks
+  var taches = props.taches || [];
+  var partenaires = props.partenaires || [];
+  var onAdd = props.onAdd;
+  var onToggle = props.onToggle;
+
+  var sorted = taches.slice().sort(function(a, b) {
+    var pOrder = { Urgente: 0, Haute: 1, Moyenne: 2, Basse: 3 };
+    var pa = pOrder[a.priorite] !== undefined ? pOrder[a.priorite] : 4;
+    var pb = pOrder[b.priorite] !== undefined ? pOrder[b.priorite] : 4;
+    if (pa !== pb) return pa - pb;
+    if (a.date_echeance && b.date_echeance) return a.date_echeance > b.date_echeance ? 1 : -1;
+    if (a.date_echeance) return -1;
+    if (b.date_echeance) return 1;
+    return 0;
+  });
+
+  var today = new Date().toISOString().split("T")[0];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#2c2c2a" }}>
+          📋 Tâches à traiter
+          {sorted.length > 0 && <span style={{ marginLeft: 8, background: "#534AB722", color: "#534AB7", borderRadius: 20, padding: "2px 8px", fontSize: 12 }}>{sorted.length}</span>}
+        </h3>
+        <button onClick={onAdd} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: "#534AB7", color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Nouvelle tâche</button>
+      </div>
+      {sorted.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "20px", color: "#bbb", fontSize: 13, background: "#f7f5f0", borderRadius: 10 }}>Aucune tâche en cours 🎉</div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {sorted.map(function(t) {
+            var cfg = PRIORITE_CONFIG[t.priorite] || PRIORITE_CONFIG.Moyenne;
+            var isLate = t.date_echeance && t.date_echeance < today;
+            var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
+            return (
+              <div key={t.id} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A33" : "#e8e6de"), borderRadius: 10, padding: "12px 14px", display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div onClick={function() { onToggle(t); }} style={{ width: 22, height: 22, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2, display: "flex", alignItems: "center", justifyContent: "center" }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: "#2c2c2a" }}>{cfg.icon} {t.titre}</span>
+                    <span style={{ fontSize: 11, background: cfg.bg, color: cfg.color, borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{t.priorite}</span>
+                    {isLate && <span style={{ fontSize: 11, background: "#E24B4A22", color: "#E24B4A", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>⚠️ En retard</span>}
+                  </div>
+                  {t.description && <div style={{ fontSize: 13, color: "#666", marginTop: 3 }}>{t.description}</div>}
+                  <div style={{ display: "flex", gap: 12, marginTop: 6, flexWrap: "wrap" }}>
+                    {t.date_echeance && <span style={{ fontSize: 12, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}</span>}
+                    {t.assigne_a && <span style={{ fontSize: 12, color: "#534AB7", fontWeight: 500 }}>→ {t.assigne_a}</span>}
+                    {t.assigne_par && <span style={{ fontSize: 12, color: "#888" }}>de {t.assigne_par}</span>}
+                    {(part || t.partenaire_nom_temp) && <span style={{ fontSize: 12, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : t.partenaire_nom_temp}</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Taches() {
   var ds = useState([]); var data = ds[0]; var setData = ds[1];
+  var ps = useState([]); var partenaires = ps[0]; var setPartenaires = ps[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
   var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
-  var EMPTY = { titre: "", priorite: "Moyenne", statut: "A faire", date_echeance: "", description: "" };
+
+  var EMPTY = { titre: "", description: "", priorite: "Moyenne", statut: "A faire", date_echeance: "", assigne_par: "", assigne_a: "", partenaire_id: "", partenaire_nom_temp: "", nouveau_partenaire: false, nouveau_partenaire_nom: "" };
   var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
-  var cycler = { "A faire": "En cours", "En cours": "Termine", "Termine": "A faire" };
+  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
+  var showDropState = useState(false); var showDrop = showDropState[0]; var setShowDrop = showDropState[1];
+  var newPartModal = useState(false); var showNewPart = newPartModal[0]; var setShowNewPart = newPartModal[1];
+  var newPartForm = useState({ nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", statut: "Prospect" });
+  var npf = newPartForm[0]; var setNpf = newPartForm[1];
+
+  useEffect(function() {
+    Promise.all([
+      sbFetch("taches", { select: "*", order: "date_echeance.asc" }),
+      sbFetch("partenaires", { select: "id,nom,type", order: "nom.asc" }),
+    ]).then(function(r) { setData(r[0]); setPartenaires(r[1]); setLoading(false); });
+  }, []);
+
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
-  useEffect(function() { sbFetch("taches", { select: "*", order: "date_echeance.asc" }).then(function(r) { setData(r); setLoading(false); }); }, []);
-  function toggle(t) { var n = cycler[t.statut]; sbUpdate("taches", t.id, { statut: n }).then(function() { setData(data.map(function(x) { return x.id === t.id ? Object.assign({}, x, { statut: n }) : x; })); }); }
+
+  var filteredParts = partenaires.filter(function(p) {
+    return search.length >= 2 && p.nom.toLowerCase().indexOf(search.toLowerCase()) !== -1;
+  });
+
   function handleAdd() {
-    var p = Object.assign({}, form); if (!p.date_echeance) delete p.date_echeance;
-    sbInsert("taches", p).then(function(rows) { setData(data.concat(rows[0])); setModal(false); setForm(EMPTY); }).catch(function(e) { alert(e.message); });
+    var payload = {
+      titre: form.titre, description: form.description, priorite: form.priorite,
+      statut: "A faire", date_echeance: form.date_echeance || null,
+      assigne_par: form.assigne_par, assigne_a: form.assigne_a,
+      partenaire_id: form.partenaire_id || null,
+      partenaire_nom_temp: form.partenaire_nom_temp || null,
+    };
+    sbInsert("taches", payload).then(function(rows) {
+      setData(data.concat(rows[0]));
+      setModal(false); setForm(EMPTY); setSearch("");
+    }).catch(function(e) { alert(e.message); });
   }
+
+  function handleToggle(t) {
+    var newStatut = t.statut === "Termine" ? "A faire" : "Termine";
+    sbUpdate("taches", t.id, { statut: newStatut }).then(function() {
+      setData(data.map(function(x) { return x.id === t.id ? Object.assign({}, x, { statut: newStatut }) : x; }));
+    });
+  }
+
+  function handleCreatePartenaire() {
+    sbInsert("partenaires", npf).then(function(rows) {
+      var newP = rows[0];
+      setPartenaires(partenaires.concat(newP));
+      setForm(Object.assign({}, form, { partenaire_id: newP.id, partenaire_nom_temp: "" }));
+      setSearch(newP.nom);
+      setShowNewPart(false);
+      setNpf({ nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", statut: "Prospect" });
+    }).catch(function(e) { alert(e.message); });
+  }
+
+  var nonTerminees = data.filter(function(t) { return t.statut !== "Termine"; });
+  var terminees = data.filter(function(t) { return t.statut === "Termine"; });
+
   if (loading) return <Spinner />;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}><button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button></div>
-      {data.length === 0 ? <Empty msg="Aucune tâche" /> : data.map(function(t) {
-        var color = STATUT_COLOR[t.priorite] || "#ddd"; var done = t.statut === "Termine";
-        return (
-          <div key={t.id} onClick={function() { toggle(t); }} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "1px solid #e8e6de", borderRadius: 10, padding: "12px 16px", cursor: "pointer" }}>
-            <div style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + color, background: done ? color : "transparent", flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500, color: done ? "#aaa" : "#2c2c2a", textDecoration: done ? "line-through" : "none" }}>{t.titre}</div>
-              {t.description && <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{t.description}</div>}
-            </div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Badge s={t.priorite} />
-              {t.date_echeance && <span style={{ fontSize: 12, color: "#bbb" }}>{t.date_echeance}</span>}
-            </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button onClick={function() { setModal(true); }} style={btnA}>+ Nouvelle tâche</button>
+      </div>
+
+      <TachesWidget taches={nonTerminees} partenaires={partenaires} onAdd={function() { setModal(true); }} onToggle={handleToggle} />
+
+      {terminees.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#aaa", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>✅ Terminées ({terminees.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {terminees.map(function(t) {
+              return (
+                <div key={t.id} onClick={function() { handleToggle(t); }} style={{ background: "#fff", border: "1px solid #f0ede6", borderRadius: 10, padding: "10px 14px", display: "flex", gap: 10, cursor: "pointer", opacity: 0.6 }}>
+                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#1D9E75", border: "2px solid #1D9E75", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <span style={{ color: "#fff", fontSize: 12 }}>✓</span>
+                  </div>
+                  <span style={{ fontSize: 14, color: "#aaa", textDecoration: "line-through" }}>{t.titre}</span>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
-      {data.length > 0 && <div style={{ fontSize: 12, color: "#bbb", textAlign: "center", marginTop: 4 }}>Cliquez pour changer le statut</div>}
-      <Modal open={modal} onClose={function() { setModal(false); }} title="Nouvelle tâche">
-        <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} /></Field>
+        </div>
+      )}
+
+      {/* MODAL NOUVELLE TÂCHE */}
+      <Modal open={modal} onClose={function() { setModal(false); setSearch(""); setForm(EMPTY); }} title="Nouvelle tâche">
+        <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} placeholder="Ex: Contacter nouveau sponsor" /></Field>
         <Field label="Description"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={form.description} onChange={function(e) { set("description", e.target.value); }} /></Field>
+
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Field label="Priorité">
             <select style={sel} value={form.priorite} onChange={function(e) { set("priorite", e.target.value); }}>
-              {["Basse","Moyenne","Haute","Urgente"].map(function(p) { return <option key={p}>{p}</option>; })}
+              {["Urgente","Haute","Moyenne","Basse"].map(function(p) { return <option key={p}>{p}</option>; })}
             </select>
           </Field>
-          <Field label="Échéance"><input type="date" style={inp} value={form.date_echeance} onChange={function(e) { set("date_echeance", e.target.value); }} /></Field>
+          <Field label="À traiter pour le">
+            <input type="date" style={inp} value={form.date_echeance} onChange={function(e) { set("date_echeance", e.target.value); }} />
+          </Field>
         </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Assigné par">
+            <select style={sel} value={form.assigne_par} onChange={function(e) { set("assigne_par", e.target.value); }}>
+              <option value="">— Sélectionner —</option>
+              {MEMBRES.map(function(m) { return <option key={m}>{m}</option>; })}
+            </select>
+          </Field>
+          <Field label="Assigné à">
+            <select style={sel} value={form.assigne_a} onChange={function(e) { set("assigne_a", e.target.value); }}>
+              <option value="">— Sélectionner —</option>
+              {MEMBRES.map(function(m) { return <option key={m}>{m}</option>; })}
+            </select>
+          </Field>
+        </div>
+
+        {/* Partenaire avec recherche */}
+        <Field label="Partenaire lié">
+          <div style={{ position: "relative" }}>
+            <input style={inp} value={search} placeholder="Tapez les premières lettres..." onChange={function(e) { setSearch(e.target.value); set("partenaire_id", ""); set("partenaire_nom_temp", ""); setShowDrop(true); }} onFocus={function() { setShowDrop(true); }} />
+            {form.partenaire_id && (
+              <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }} onClick={function() { set("partenaire_id", ""); setSearch(""); }}>×</div>
+            )}
+            {showDrop && search.length >= 2 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e8e6de", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 200, overflowY: "auto" }}>
+                {filteredParts.length === 0 ? (
+                  <div style={{ padding: "10px 14px" }}>
+                    <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>Aucun résultat pour "{search}"</div>
+                    <button onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1px dashed #534AB7", background: "#534AB711", color: "#534AB7", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Créer "{search}" comme nouveau partenaire</button>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredParts.map(function(p) {
+                      return (
+                        <div key={p.id} onClick={function() { set("partenaire_id", p.id); setSearch(p.nom); setShowDrop(false); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #f5f3ee" }}
+                          onMouseEnter={function(e) { e.currentTarget.style.background = "#f7f5f0"; }}
+                          onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
+                          <span style={{ fontWeight: 500 }}>{p.nom}</span>
+                          <span style={{ color: "#aaa", marginLeft: 8, fontSize: 12 }}>{p.type}</span>
+                        </div>
+                      );
+                    })}
+                    <div onClick={function() { setShowNewPart(true); setShowDrop(false); set("partenaire_nom_temp", search); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, color: "#534AB7", fontWeight: 500, borderTop: "1px solid #f0ede6" }}>+ Créer nouveau partenaire</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </Field>
+
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={function() { setModal(false); }} style={btnS}>Annuler</button>
+          <button onClick={function() { setModal(false); setSearch(""); setForm(EMPTY); }} style={btnS}>Annuler</button>
           <button onClick={handleAdd} disabled={!form.titre} style={Object.assign({}, btnP, { opacity: form.titre ? 1 : 0.5 })}>Enregistrer</button>
         </div>
       </Modal>
+
+      {/* MODAL NOUVEAU PARTENAIRE */}
+      {showNewPart && <Modal open={showNewPart} onClose={function() { setShowNewPart(false); }} title="Nouveau partenaire">
+        <Field label="Nom *"><input style={inp} value={npf.nom || search} onChange={function(e) { setNpf(Object.assign({}, npf, { nom: e.target.value })); }} /></Field>
+        <Field label="Type">
+          <select style={sel} value={npf.type} onChange={function(e) { setNpf(Object.assign({}, npf, { type: e.target.value })); }}>
+            {["ONG","Shelter","Ecole","Sponsor"].map(function(t) { return <option key={t}>{t}</option>; })}
+          </select>
+        </Field>
+        <Field label="Contact"><input style={inp} value={npf.contact_nom} onChange={function(e) { setNpf(Object.assign({}, npf, { contact_nom: e.target.value })); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Email"><input style={inp} type="email" value={npf.contact_email} onChange={function(e) { setNpf(Object.assign({}, npf, { contact_email: e.target.value })); }} /></Field>
+          <Field label="Téléphone"><input style={inp} value={npf.contact_tel} onChange={function(e) { setNpf(Object.assign({}, npf, { contact_tel: e.target.value })); }} /></Field>
+        </div>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setShowNewPart(false); }} style={btnS}>Annuler</button>
+          <button onClick={handleCreatePartenaire} disabled={!npf.nom} style={Object.assign({}, btnP, { opacity: npf.nom ? 1 : 0.5 })}>Créer & lier</button>
+        </div>
+      </Modal>}
     </div>
   );
 }
