@@ -206,6 +206,22 @@ function Dashboard(props) {
     });
   }
 
+  // Modal nouvelle tâche (géré dans le Dashboard)
+  var tModal = useState(false); var tacheModal = tModal[0]; var setTacheModal = tModal[1];
+  var TEMPTY = { titre: "", description: "", priorite: "Moyenne", date_echeance: "", assigne_par: "", assigne_a: "", partenaire_id: "", partenaire_nom_temp: "" };
+  var tForm = useState(TEMPTY); var tacheForm = tForm[0]; var setTacheForm = tForm[1];
+  var tSearch = useState(""); var partSearch = tSearch[0]; var setPartSearch = tSearch[1];
+  var tDrop = useState(false); var showDrop = tDrop[0]; var setShowDrop = tDrop[1];
+  function tset(k, v) { setTacheForm(Object.assign({}, tacheForm, { [k]: v })); }
+  function handleAddTache() {
+    var payload = { titre: tacheForm.titre, description: tacheForm.description, priorite: tacheForm.priorite, statut: "A faire", date_echeance: tacheForm.date_echeance || null, assigne_par: tacheForm.assigne_par, assigne_a: tacheForm.assigne_a, partenaire_id: tacheForm.partenaire_id || null, partenaire_nom_temp: tacheForm.partenaire_nom_temp || null };
+    sbInsert("taches", payload).then(function(rows) {
+      setData(Object.assign({}, data, { taches: [rows[0]].concat(data.taches || []) }));
+      setTacheModal(false); setTacheForm(TEMPTY); setPartSearch("");
+    }).catch(function(e) { alert(e.message); });
+  }
+  var filteredParts = (data ? data.partenaires || [] : []).filter(function(p) { return partSearch.length >= 2 && p.nom.toLowerCase().indexOf(partSearch.toLowerCase()) !== -1; });
+
   var aattState = useState(0); var actionsEnAttente = aattState[0]; var setActionsEnAttente = aattState[1];
   useEffect(function() {
     var tomorrow = new Date(Date.now() + 86400000).toISOString().split("T")[0];
@@ -239,7 +255,7 @@ function Dashboard(props) {
         <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#fff" : "transparent", color: dashView === "taches" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTab("taches"); setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
       </div>
       <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
       <SectionTitle>Activités</SectionTitle>
@@ -270,6 +286,55 @@ function Dashboard(props) {
       </div>
 
       </div>
+
+      {/* MODAL NOUVELLE TÂCHE — géré dans le Dashboard */}
+      <Modal open={tacheModal} onClose={function() { setTacheModal(false); setTacheForm(TEMPTY); setPartSearch(""); }} title="Nouvelle tâche">
+        <Field label="Titre *"><input style={inp} value={tacheForm.titre} onChange={function(e) { tset("titre", e.target.value); }} placeholder="Ex: Contacter nouveau sponsor" /></Field>
+        <Field label="Description"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={tacheForm.description} onChange={function(e) { tset("description", e.target.value); }} /></Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Priorité">
+            <select style={sel} value={tacheForm.priorite} onChange={function(e) { tset("priorite", e.target.value); }}>
+              {["Urgente","Haute","Moyenne","Basse"].map(function(p) { return <option key={p}>{p}</option>; })}
+            </select>
+          </Field>
+          <Field label="À traiter pour le">
+            <input type="date" style={inp} value={tacheForm.date_echeance} onChange={function(e) { tset("date_echeance", e.target.value); }} />
+          </Field>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Assigné par">
+            <select style={sel} value={tacheForm.assigne_par} onChange={function(e) { tset("assigne_par", e.target.value); }}>
+              <option value="">— Sélectionner —</option>
+              {MEMBRES.map(function(m) { return <option key={m}>{m}</option>; })}
+            </select>
+          </Field>
+          <Field label="Assigné à">
+            <select style={sel} value={tacheForm.assigne_a} onChange={function(e) { tset("assigne_a", e.target.value); }}>
+              <option value="">— Sélectionner —</option>
+              {MEMBRES.map(function(m) { return <option key={m}>{m}</option>; })}
+            </select>
+          </Field>
+        </div>
+        <Field label="Partenaire lié">
+          <div style={{ position: "relative" }}>
+            <input style={inp} value={partSearch} placeholder="Tapez les premières lettres..." onChange={function(e) { setPartSearch(e.target.value); tset("partenaire_id", ""); tset("partenaire_nom_temp", ""); setShowDrop(true); }} onFocus={function() { setShowDrop(true); }} />
+            {tacheForm.partenaire_id && <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }} onClick={function() { tset("partenaire_id", ""); setPartSearch(""); }}>×</div>}
+            {showDrop && partSearch.length >= 2 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e8e6de", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 180, overflowY: "auto" }}>
+                {filteredParts.length === 0
+                  ? <div style={{ padding: "10px 14px", fontSize: 13, color: "#888" }}>Aucun résultat pour "{partSearch}"</div>
+                  : filteredParts.map(function(p) { return <div key={p.id} onClick={function() { tset("partenaire_id", p.id); setPartSearch(p.nom); setShowDrop(false); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: 14, borderBottom: "1px solid #f0ede6" }} onMouseEnter={function(e){e.currentTarget.style.background="#f7f5f0";}} onMouseLeave={function(e){e.currentTarget.style.background="";}}>
+                      {p.nom} <span style={{ fontSize: 11, color: "#aaa" }}>{p.type}</span>
+                    </div>; })}
+              </div>
+            )}
+          </div>
+        </Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setTacheModal(false); setTacheForm(TEMPTY); setPartSearch(""); }} style={btnS}>Annuler</button>
+          <button onClick={handleAddTache} disabled={!tacheForm.titre} style={Object.assign({}, btnP, { opacity: tacheForm.titre ? 1 : 0.5 })}>Enregistrer</button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -2202,7 +2267,6 @@ var TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "partenaires", label: "Partenaires" },
   { id: "evenements", label: "Événements" },
-  { id: "taches", label: "Tâches" },
   { id: "coaches", label: "Coaches" },
 ];
 
@@ -2252,7 +2316,6 @@ export default function App() {
         {tab === "dashboard" && <Dashboard setTab={setTab} setOpenTacheModal={setOpenTacheModal} dashView={dashView} setDashView={setDashView} />}
         {tab === "partenaires" && <Partenaires />}
         {tab === "evenements" && <Evenements />}
-        {tab === "taches" && <Taches openModal={openTacheModal} setOpenModal={setOpenTacheModal} />}
         {tab === "coaches" && <Coaches />}
       </div>
     </div>
