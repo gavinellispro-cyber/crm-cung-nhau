@@ -158,108 +158,6 @@ function PartenaireMultiSelect(props) {
   );
 }
 
-// ── TACHES MODAL WRAPPER (for dashboard) ────────────────────
-function TachesModalWrapper(props) {
-  var openModal = props.openModal;
-  var setOpenModal = props.setOpenModal;
-  var partenaires = props.partenaires || [];
-  var onCreated = props.onCreated || function() {};
-
-  var ms = useState(false); var modal = ms[0]; var setModal = ms[1];
-  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
-  var showDropState = useState(false); var showDrop = showDropState[0]; var setShowDrop = showDropState[1];
-  var showNewPart = useState(false); var snp = showNewPart[0]; var setSnp = showNewPart[1];
-  var npf = useState({ nom: "", type: "ONG", contact_nom: "", contact_email: "", contact_tel: "", statut: "Prospect" });
-  var newPartForm = npf[0]; var setNewPartForm = npf[1];
-
-  var EMPTY = { titre: "", description: "", priorite: "Moyenne", statut: "A faire", date_echeance: "", assigne_par: "", assigne_a: "", partenaire_id: "", partenaire_nom_temp: "" };
-  var fs = useState(EMPTY); var form = fs[0]; var setForm = fs[1];
-
-  useEffect(function() {
-    if (openModal) { setModal(true); setOpenModal(false); }
-  }, [openModal]);
-
-  function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
-
-  var filteredParts = partenaires.filter(function(p) {
-    return search.length >= 2 && p.nom.toLowerCase().indexOf(search.toLowerCase()) !== -1;
-  });
-
-  function handleAdd() {
-    var payload = { titre: form.titre, description: form.description, priorite: form.priorite, statut: "A faire", date_echeance: form.date_echeance || null, assigne_par: form.assigne_par, assigne_a: form.assigne_a, partenaire_id: form.partenaire_id || null, partenaire_nom_temp: form.partenaire_nom_temp || null };
-    sbInsert("taches", payload).then(function(rows) {
-      onCreated(rows[0]);
-      setModal(false); setForm(EMPTY); setSearch("");
-    }).catch(function(e) { alert(e.message); });
-  }
-
-  function handleCreatePartenaire() {
-    sbInsert("partenaires", newPartForm).then(function(rows) {
-      var newP = rows[0];
-      setForm(Object.assign({}, form, { partenaire_id: newP.id }));
-      setSearch(newP.nom);
-      setSnp(false);
-    }).catch(function(e) { alert(e.message); });
-  }
-
-  if (!modal) return null;
-
-  return (
-    <Modal open={modal} onClose={function() { setModal(false); setForm(EMPTY); setSearch(""); }} title="Nouvelle tâche">
-      <Field label="Titre *"><input style={inp} value={form.titre} onChange={function(e) { set("titre", e.target.value); }} placeholder="Ex: Contacter nouveau sponsor" /></Field>
-      <Field label="Description"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={form.description} onChange={function(e) { set("description", e.target.value); }} /></Field>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Priorité"><select style={sel} value={form.priorite} onChange={function(e) { set("priorite", e.target.value); }}>{["Urgente","Haute","Moyenne","Basse"].map(function(p){return <option key={p}>{p}</option>;})}</select></Field>
-        <Field label="À traiter pour le"><input type="date" style={inp} value={form.date_echeance} onChange={function(e) { set("date_echeance", e.target.value); }} /></Field>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <Field label="Assigné par"><select style={sel} value={form.assigne_par} onChange={function(e) { set("assigne_par", e.target.value); }}><option value="">— Sélectionner —</option>{MEMBRES.map(function(m){return <option key={m}>{m}</option>;})}</select></Field>
-        <Field label="Assigné à"><select style={sel} value={form.assigne_a} onChange={function(e) { set("assigne_a", e.target.value); }}><option value="">— Sélectionner —</option>{MEMBRES.map(function(m){return <option key={m}>{m}</option>;})}</select></Field>
-      </div>
-      <Field label="Partenaire lié">
-        <div style={{ position: "relative" }}>
-          <input style={inp} value={search} placeholder="Tapez les premières lettres..." onChange={function(e) { setSearch(e.target.value); set("partenaire_id", ""); setShowDrop(true); }} onFocus={function() { setShowDrop(true); }} />
-          {form.partenaire_id && <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }} onClick={function() { set("partenaire_id", ""); setSearch(""); }}>×</div>}
-          {showDrop && search.length >= 2 && (
-            <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e8e6de", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 200, overflowY: "auto" }}>
-              {filteredParts.length === 0 ? (
-                <div style={{ padding: "10px 14px" }}>
-                  <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>Aucun résultat pour "{search}"</div>
-                  <button onClick={function() { setSnp(true); setShowDrop(false); }} style={{ width: "100%", padding: "8px", borderRadius: 8, border: "1px dashed #534AB7", background: "#534AB711", color: "#534AB7", cursor: "pointer", fontSize: 13, fontWeight: 500 }}>+ Créer "{search}" comme nouveau partenaire</button>
-                </div>
-              ) : (
-                <div>
-                  {filteredParts.map(function(p) {
-                    return <div key={p.id} onClick={function() { set("partenaire_id", p.id); setSearch(p.nom); setShowDrop(false); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #f5f3ee" }} onMouseEnter={function(e){e.currentTarget.style.background="#f7f5f0";}} onMouseLeave={function(e){e.currentTarget.style.background="";}}><span style={{ fontWeight: 500 }}>{p.nom}</span><span style={{ color: "#aaa", marginLeft: 8, fontSize: 12 }}>{p.type}</span></div>;
-                  })}
-                  <div onClick={function() { setSnp(true); setShowDrop(false); }} style={{ padding: "10px 14px", cursor: "pointer", fontSize: 13, color: "#534AB7", fontWeight: 500 }}>+ Créer nouveau partenaire</div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </Field>
-      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-        <button onClick={function() { setModal(false); setForm(EMPTY); setSearch(""); }} style={btnS}>Annuler</button>
-        <button onClick={handleAdd} disabled={!form.titre} style={Object.assign({}, btnP, { opacity: form.titre ? 1 : 0.5 })}>Enregistrer</button>
-      </div>
-      {snp && <Modal open={snp} onClose={function() { setSnp(false); }} title="Nouveau partenaire">
-        <Field label="Nom *"><input style={inp} value={newPartForm.nom || search} onChange={function(e) { setNewPartForm(Object.assign({}, newPartForm, { nom: e.target.value })); }} /></Field>
-        <Field label="Type"><select style={sel} value={newPartForm.type} onChange={function(e) { setNewPartForm(Object.assign({}, newPartForm, { type: e.target.value })); }}>{["ONG","Shelter","Ecole","Sponsor"].map(function(t){return <option key={t}>{t}</option>;})}</select></Field>
-        <Field label="Contact"><input style={inp} value={newPartForm.contact_nom} onChange={function(e) { setNewPartForm(Object.assign({}, newPartForm, { contact_nom: e.target.value })); }} /></Field>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Email"><input style={inp} type="email" value={newPartForm.contact_email} onChange={function(e) { setNewPartForm(Object.assign({}, newPartForm, { contact_email: e.target.value })); }} /></Field>
-          <Field label="Tél"><input style={inp} value={newPartForm.contact_tel} onChange={function(e) { setNewPartForm(Object.assign({}, newPartForm, { contact_tel: e.target.value })); }} /></Field>
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-          <button onClick={function() { setSnp(false); }} style={btnS}>Annuler</button>
-          <button onClick={handleCreatePartenaire} disabled={!newPartForm.nom} style={Object.assign({}, btnP, { opacity: newPartForm.nom ? 1 : 0.5 })}>Créer & lier</button>
-        </div>
-      </Modal>}
-    </Modal>
-  );
-}
-
 // ── DASHBOARD ─────────────────────────────────────────────────
 function Dashboard(props) {
   var setTab = props.setTab || function() {};
@@ -351,7 +249,9 @@ function Dashboard(props) {
         <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
       </div>
 
-
+      <div style={{ borderTop: "2px solid #e8e6de", paddingTop: 20, marginTop: 8 }}>
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} onAdd={function() { setOpenTacheModal(true); setTab("taches"); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} />
+      </div>
     </div>
   );
 }
@@ -789,7 +689,8 @@ function FichePartenaire(props) {
           </div>
         </Modal>
       </div>
-      </div>
+    </React.Fragment>}
+    </div>
   );
 }
 
@@ -1193,20 +1094,22 @@ function Evenements() {
   }
 
   function handleUpdateEvt() {
-    var payload = {
-      titre: editingEvt.titre,
-      type: editingEvt.type,
-      date_debut: editingEvt.date_debut,
-      lieu: editingEvt.lieu,
-      nombre_enfants_presents: editingEvt.nombre_enfants_presents || null,
-      statut: editingEvt.statut,
-      notes: editingEvt.notes,
-    };
-    sbUpdate("evenements", editingEvt.id, payload).then(function() {
+    var payload = { titre: editingEvt.titre, type: editingEvt.type, date_debut: editingEvt.date_debut, lieu: editingEvt.lieu, nombre_enfants_presents: editingEvt.nombre_enfants_presents || null, statut: editingEvt.statut, notes: editingEvt.notes, confirmation_statut: editingEvt.confirmation_statut, responsable_coach_id: editingEvt.responsable_coach_id || null };
+    sbUpdate("evenements", editingEvt.id, payload)
+    .then(function() {
+      return fetch(SUPABASE_URL + "/rest/v1/evenement_coaches?evenement_id=eq." + editingEvt.id, {
+        method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY }
+      });
+    })
+    .then(function() {
+      var liaisons = editEvtCoaches.map(function(cid) { return { evenement_id: editingEvt.id, coach_id: cid, heures_prestees: 0 }; });
+      return liaisons.length ? sbInsertMany("evenement_coaches", liaisons) : Promise.resolve([]);
+    })
+    .then(function() {
       setData(data.map(function(e) { return e.id === editingEvt.id ? Object.assign({}, e, payload) : e; }));
-      setEditEvtModal(false);
-      setEditingEvt(null);
-    }).catch(function(e) { alert(e.message); });
+      setEditEvtModal(false); setEditingEvt(null);
+    })
+    .catch(function(e) { alert("Erreur: " + e.message); });
   }
 
   function deleteEvt(e) {
