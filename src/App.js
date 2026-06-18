@@ -1212,27 +1212,52 @@ function Partenaires() {
 }
 
 
-// ── COACH MULTI-SELECT ────────────────────────────────────────
+// ── COACH MULTI-SELECT (accordéon) ───────────────────────────
 function CoachMultiSelect(props) {
   var coaches = props.coaches;
   var selected = props.selected;
   var onChange = props.onChange;
-  if (!coaches.length) return <div style={{ fontSize: 12, color: "#aaa", padding: "8px 0" }}>Aucun coach actif</div>;
+  var openState = useState(false); var open = openState[0]; var setOpen = openState[1];
+  var nbSel = selected.length;
+  var COLOR = "#C8102E";
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {coaches.map(function(c) {
-        var isSelected = selected.indexOf(c.id) !== -1;
-        return (
-          <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 8, border: "1px solid " + (isSelected ? "#C8102E" : "#e0e0e0"), background: isSelected ? "#C8102E11" : "#fff", cursor: "pointer" }}>
-            <input type="checkbox" checked={isSelected} onChange={function() {
-              if (isSelected) onChange(selected.filter(function(id) { return id !== c.id; }));
-              else onChange(selected.concat(c.id));
-            }} style={{ accentColor: "#C8102E" }} />
-            <span style={{ fontSize: 13, fontWeight: isSelected ? 500 : 400, flex: 1 }}>{c.prenom} {c.nom}</span>
-            <span style={{ fontSize: 12, color: "#aaa" }}>{c.pays || ""} · {c.langues || ""}</span>
-          </label>
-        );
-      })}
+    <div style={{ border: "1px solid " + (nbSel > 0 ? COLOR : "#e0e0e0"), borderRadius: 10, overflow: "hidden", marginBottom: 8 }}>
+      <div onClick={function() { setOpen(!open); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: nbSel > 0 ? COLOR + "11" : "#fafafa", cursor: "pointer", userSelect: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 14 }}>🏉</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: nbSel > 0 ? COLOR : "#444" }}>Coaches & bénévoles</span>
+          {nbSel > 0 && <span style={{ background: COLOR, color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{nbSel} sélectionné{nbSel > 1 ? "s" : ""}</span>}
+          {!coaches.length && <span style={{ fontSize: 11, color: "#aaa" }}>(aucun)</span>}
+        </div>
+        <span style={{ fontSize: 16, color: "#888", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+      </div>
+      {open && (
+        <div style={{ borderTop: "1px solid #e0e0e0", background: "#fff" }}>
+          {!coaches.length ? (
+            <div style={{ padding: "10px 14px", fontSize: 12, color: "#aaa" }}>Aucun coach actif</div>
+          ) : (
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+              {coaches.map(function(c) {
+                var isSelected = selected.indexOf(c.id) !== -1;
+                return (
+                  <label key={c.id} onClick={function() {
+                    if (isSelected) onChange(selected.filter(function(id) { return id !== c.id; }));
+                    else onChange(selected.concat(c.id));
+                  }} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 14px", cursor: "pointer", background: isSelected ? COLOR + "0d" : "transparent", borderBottom: "1px solid #f4f4f4" }}
+                    onMouseEnter={function(e) { if (!isSelected) e.currentTarget.style.background = "#f9f9f9"; }}
+                    onMouseLeave={function(e) { e.currentTarget.style.background = isSelected ? COLOR + "0d" : "transparent"; }}>
+                    <div style={{ width: 16, height: 16, borderRadius: 4, border: "2px solid " + (isSelected ? COLOR : "#ccc"), background: isSelected ? COLOR : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all .15s" }}>
+                      {isSelected && <span style={{ color: "#fff", fontSize: 11, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: isSelected ? 600 : 400, color: isSelected ? COLOR : "#333", flex: 1 }}>{c.prenom} {c.nom}</span>
+                    <span style={{ fontSize: 11, color: "#aaa" }}>{[c.pays, c.langues].filter(Boolean).join(" · ")}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1846,7 +1871,6 @@ function Evenements() {
           return <PartenaireMultiSelect key={item.type} partenaires={partenaires} selected={item.sel} onChange={item.setSel} type={item.type} />;
         })}
         <div style={{ borderTop: "1px solid #e8e8e8", margin: "8px 0 14px" }} />
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#C8102E", marginBottom: 8 }}>🏉 Coaches & bénévoles assignés{selectedCoaches.length > 0 ? " (" + selectedCoaches.length + " sélectionné" + (selectedCoaches.length > 1 ? "s" : "") + ")" : ""}</div>
         <CoachMultiSelect coaches={coaches} selected={selectedCoaches} onChange={setSelectedCoaches} />
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 50 })} value={form.notes} onChange={function(e) { set("notes", e.target.value); }} /></Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
