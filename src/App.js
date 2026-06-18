@@ -220,8 +220,18 @@ function Dashboard(props) {
   var sponsors = data.partenaires.filter(function(p) { return p.type === "Sponsor"; });
   var valeur = sponsors.filter(function(s) { return s.statut === "Actif"; }).reduce(function(sum, s) { return sum + Number(s.montant_annuel || 0); }, 0);
 
+  var totalPending = (data.taches || []).length + (data.actions || []).length;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <div style={{ display: "flex", gap: 4, background: "#f0ede6", borderRadius: 10, padding: 4, alignSelf: "flex-start" }}>
+        <button onClick={function() { setDashView("general"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "general" ? "#fff" : "transparent", color: dashView === "general" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "general" ? 600 : 400 }}>📊 Vue générale</button>
+        <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#fff" : "transparent", color: dashView === "taches" ? "#534AB7" : "#888", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
+      </div>
+      <div style={{ display: dashView === "taches" ? "block" : "none" }}>
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} onAdd={function() { setOpenTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} />
+      </div>
+      <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
       <SectionTitle>Activités</SectionTitle>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
         <KpiCard label="Événements ce mois" value={evtMois} color="#534AB7" />
@@ -689,7 +699,6 @@ function FichePartenaire(props) {
           </div>
         </Modal>
       </div>
-    </React.Fragment>}
     </div>
   );
 }
@@ -2079,7 +2088,6 @@ export default function App() {
         {tab === "partenaires" && <Partenaires />}
         {tab === "evenements" && <Evenements />}
         {tab === "coaches" && <Coaches />}
-
       </div>
     </div>
   );
