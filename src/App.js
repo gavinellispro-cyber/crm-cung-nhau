@@ -313,12 +313,12 @@ function Dashboard(props) {
   // Prochains événements : à venir + confirmés (les 5 prochains)
   var todayStr = now.toISOString().split("T")[0];
   var prochains = data.evenements
-    .filter(function(e) { return e.date_debut && e.date_debut.split("T")[0] >= todayStr && e.confirmation_statut === "Confirmé"; })
+    .filter(function(e) { return e.date_debut && e.date_debut.split("T")[0] >= todayStr && (e.confirmation_statut === "Confirmé" || e.confirmation_statut === "Confirme"); })
     .sort(function(a,b){ return a.date_debut > b.date_debut ? 1 : -1; })
     .slice(0, 5);
 
   var MOIS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
-  var CONF_COLOR = { "Confirmé": "#1D9E75", "En attente": "#BA7517", "Annulé": "#A32D2D" };
+  var CONF_COLOR = { "Confirmé": "#1D9E75", "Confirme": "#1D9E75", "En attente": "#BA7517", "Annulé": "#A32D2D" };
   var TYPE_EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
 
   return (
