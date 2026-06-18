@@ -183,6 +183,41 @@ function PartenaireMultiSelect(props) {
   );
 }
 
+// ── DASH EVENT CARD ───────────────────────────────────────────
+function DashEvtCard(props) {
+  var e = props.e; var onGo = props.onGo;
+  var CONF_COLOR = props.CONF_COLOR; var TYPE_EVT_COLOR = props.TYPE_EVT_COLOR; var MOIS_FR = props.MOIS_FR;
+  var dateStr = e.date_debut ? e.date_debut.split("T")[0] : "—";
+  var parts = dateStr !== "—" ? dateStr.split("-") : ["","",""];
+  var jour = parts[2]; var moisIdx = parseInt(parts[1], 10) - 1;
+  var confColor = CONF_COLOR[e.confirmation_statut] || "#888";
+  var statColor = TYPE_EVT_COLOR[e.statut] || "#888";
+  return (
+    <div onClick={onGo} style={{ background: "#fff", border: "1px solid #e0e0e0", borderLeft: "4px solid " + statColor, borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 16, cursor: "pointer", transition: "box-shadow .15s" }}
+      onMouseEnter={function(el) { el.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,0.08)"; }}
+      onMouseLeave={function(el) { el.currentTarget.style.boxShadow="none"; }}>
+      {/* Badge date */}
+      <div style={{ flexShrink: 0, textAlign: "center", background: "#1a1a1a", color: "#fff", borderRadius: 10, padding: "8px 12px", minWidth: 50 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{jour}</div>
+        <div style={{ fontSize: 10, fontWeight: 600, opacity: 0.7, marginTop: 2 }}>{MOIS_FR[moisIdx] ? MOIS_FR[moisIdx].slice(0,3).toUpperCase() : ""}</div>
+      </div>
+      {/* Contenu */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.titre}</div>
+        <div style={{ fontSize: 12, color: "#888", marginTop: 3 }}>{e.type}{e.lieu ? " · " + e.lieu : ""}</div>
+        {e.notes && <div style={{ fontSize: 11, color: "#aaa", marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.notes}</div>}
+      </div>
+      {/* Méta droite */}
+      <div style={{ flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+        {e.confirmation_statut && <span style={{ fontSize: 11, fontWeight: 600, color: confColor, background: confColor + "18", padding: "2px 8px", borderRadius: 20 }}>{e.confirmation_statut}</span>}
+        <span style={{ fontSize: 11, fontWeight: 600, color: statColor, background: statColor + "15", padding: "2px 8px", borderRadius: 20 }}>{e.statut}</span>
+        {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 600 }}>👦 {e.nombre_enfants_presents} enfants</span>}
+      </div>
+      <div style={{ flexShrink: 0, fontSize: 16, color: "#ccc" }}>→</div>
+    </div>
+  );
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────
 function Dashboard(props) {
   var setTab = props.setTab || function() {};
@@ -260,18 +295,31 @@ function Dashboard(props) {
 
   var now = new Date();
   var moisDebut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  var moisFin = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
   var anneeDebut = new Date(now.getFullYear(), 0, 1).toISOString();
   var revMois = data.revenus.filter(function(r) { return r.date_reception >= moisDebut; }).reduce(function(s, r) { return s + Number(r.montant); }, 0);
   var depMois = data.depenses.filter(function(d) { return d.date_depense >= moisDebut; }).reduce(function(s, d) { return s + Number(d.montant); }, 0);
-  var evtMois = data.evenements.filter(function(e) { return e.date_debut >= moisDebut; }).length;
-  var evtAnnee = data.evenements.filter(function(e) { return e.date_debut >= anneeDebut; }).length;
+  var evtMoisList = data.evenements.filter(function(e) { return e.date_debut >= moisDebut && e.date_debut <= moisFin; }).sort(function(a,b){ return a.date_debut > b.date_debut ? 1 : -1; });
+  var evtMois = evtMoisList.length;
+  var evtAnneeList = data.evenements.filter(function(e) { return e.date_debut >= anneeDebut; });
+  var evtAnnee = evtAnneeList.length;
   var enfants = data.evenements.reduce(function(s, e) { return s + (Number(e.nombre_enfants_presents) || 0); }, 0);
   var tachesRetard = data.taches.filter(function(t) { return t.statut !== "Termine" && t.date_echeance && t.date_echeance < now.toISOString().split("T")[0]; }).length;
   var byType = function(t) { return data.partenaires.filter(function(p) { return p.type === t && p.statut === "Actif"; }).length; };
   var sponsors = data.partenaires.filter(function(p) { return p.type === "Sponsor"; });
   var valeur = sponsors.filter(function(s) { return s.statut === "Actif"; }).reduce(function(sum, s) { return sum + Number(s.montant_annuel || 0); }, 0);
-
   var totalPending = (data.taches || []).length + (data.actions || []).length + (data.tachesEvt || []).length;
+
+  // Prochains événements : à venir + confirmés (les 5 prochains)
+  var todayStr = now.toISOString().split("T")[0];
+  var prochains = data.evenements
+    .filter(function(e) { return e.date_debut && e.date_debut.split("T")[0] >= todayStr && e.confirmation_statut === "Confirmé"; })
+    .sort(function(a,b){ return a.date_debut > b.date_debut ? 1 : -1; })
+    .slice(0, 5);
+
+  var MOIS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var CONF_COLOR = { "Confirmé": "#1D9E75", "En attente": "#BA7517", "Annulé": "#A32D2D" };
+  var TYPE_EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -283,27 +331,110 @@ function Dashboard(props) {
         <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
       </div>
       <div style={{ display: dashView === "general" ? "flex" : "none", flexDirection: "column", gap: 20 }}>
-      <SectionTitle>Activités</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        <KpiCard label="Événements ce mois" value={evtMois} color="#C8102E" />
-        <KpiCard label="Cette année" value={evtAnnee} color="#C8102E" />
-        <KpiCard label="Enfants touchés" value={enfants.toLocaleString()} color="#1D9E75" />
-      </div>
-      <SectionTitle>Partenaires actifs</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
-        <KpiCard label="🤝 ONG" value={byType("ONG")} color={TYPE_COLOR.ONG} />
-        <KpiCard label="🏠 Shelters" value={byType("Shelter")} color={TYPE_COLOR.Shelter} />
-        <KpiCard label="🏫 Écoles" value={byType("Ecole")} color={TYPE_COLOR.Ecole} />
-        <KpiCard label="💼 Sponsors" value={byType("Sponsor")} color={TYPE_COLOR.Sponsor} />
-      </div>
-      <SectionTitle>Opérations</SectionTitle>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
-        <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
-        <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
-        <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
-      </div>
+
+        {/* ── ACTIVITÉS ── */}
+        <SectionTitle>Activités</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          {/* KPI Ce mois — cliquable */}
+          <div onClick={function() { setDashView("evtMois"); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+            onMouseEnter={function(e) { e.currentTarget.style.boxShadow="0 4px 16px rgba(200,16,46,0.15)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+            onMouseLeave={function(e) { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.transform="none"; }}>
+            <span style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Événements ce mois · {MOIS_FR[now.getMonth()]}</span>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtMois}</div>
+            <div style={{ fontSize: 11, color: "#C8102E", marginTop: 6, fontWeight: 500 }}>Voir le détail →</div>
+          </div>
+          {/* KPI Année — cliquable */}
+          <div onClick={function() { setDashView("evtAnnee"); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px", cursor: "pointer", transition: "box-shadow .15s, transform .15s" }}
+            onMouseEnter={function(e) { e.currentTarget.style.boxShadow="0 4px 16px rgba(200,16,46,0.15)"; e.currentTarget.style.transform="translateY(-2px)"; }}
+            onMouseLeave={function(e) { e.currentTarget.style.boxShadow="none"; e.currentTarget.style.transform="none"; }}>
+            <span style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Cette année · {now.getFullYear()}</span>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#C8102E", lineHeight: 1.2, marginTop: 4 }}>{evtAnnee}</div>
+            <div style={{ fontSize: 11, color: "#C8102E", marginTop: 6, fontWeight: 500 }}>Voir le détail →</div>
+          </div>
+          <KpiCard label="Enfants touchés" value={enfants.toLocaleString()} color="#1D9E75" />
+        </div>
+
+        {/* ── PROCHAINS ÉVÉNEMENTS CONFIRMÉS ── */}
+        <SectionTitle>Prochains événements confirmés</SectionTitle>
+        {prochains.length === 0 ? (
+          <div style={{ fontSize: 13, color: "#aaa", padding: "12px 0" }}>Aucun événement confirmé à venir</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {prochains.map(function(e) {
+              var dateStr = e.date_debut ? e.date_debut.split("T")[0] : "—";
+              var isPast = dateStr < todayStr;
+              var daysLeft = Math.ceil((new Date(dateStr) - now) / 86400000);
+              return (
+                <div key={e.id} onClick={function() { setTab("evenements"); }} style={{ background: "#fff", border: "1px solid #e0e0e0", borderLeft: "4px solid #1D9E75", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "box-shadow .15s" }}
+                  onMouseEnter={function(el) { el.currentTarget.style.boxShadow="0 2px 12px rgba(0,0,0,0.08)"; }}
+                  onMouseLeave={function(el) { el.currentTarget.style.boxShadow="none"; }}>
+                  {/* Date badge */}
+                  <div style={{ flexShrink: 0, textAlign: "center", background: "#C8102E", color: "#fff", borderRadius: 8, padding: "6px 10px", minWidth: 44 }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1 }}>{dateStr.split("-")[2]}</div>
+                    <div style={{ fontSize: 10, fontWeight: 500, opacity: 0.85 }}>{MOIS_FR[parseInt(dateStr.split("-")[1],10)-1].slice(0,3).toUpperCase()}</div>
+                  </div>
+                  {/* Infos */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.titre}</div>
+                    <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{e.type}{e.lieu ? " · " + e.lieu : ""}</div>
+                  </div>
+                  {/* Méta */}
+                  <div style={{ flexShrink: 0, textAlign: "right" }}>
+                    {e.nombre_enfants_presents > 0 && <div style={{ fontSize: 12, color: "#1D9E75", fontWeight: 600 }}>👦 {e.nombre_enfants_presents}</div>}
+                    <div style={{ fontSize: 11, color: daysLeft <= 3 ? "#C8102E" : "#aaa", fontWeight: daysLeft <= 3 ? 700 : 400, marginTop: 2 }}>
+                      {daysLeft === 0 ? "Aujourd'hui !" : daysLeft === 1 ? "Demain" : "Dans " + daysLeft + " j"}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── PARTENAIRES ACTIFS ── */}
+        <SectionTitle>Partenaires actifs</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+          <KpiCard label="🤝 ONG" value={byType("ONG")} color={TYPE_COLOR.ONG} />
+          <KpiCard label="🏠 Shelters" value={byType("Shelter")} color={TYPE_COLOR.Shelter} />
+          <KpiCard label="🏫 Écoles" value={byType("Ecole")} color={TYPE_COLOR.Ecole} />
+          <KpiCard label="💼 Sponsors" value={byType("Sponsor")} color={TYPE_COLOR.Sponsor} />
+        </div>
+
+        {/* ── OPÉRATIONS ── */}
+        <SectionTitle>Opérations</SectionTitle>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
+          <KpiCard label="Coaches actifs" value={data.coaches.length} color="#1D9E75" />
+          <KpiCard label="Tâches en retard" value={tachesRetard} color={tachesRetard > 0 ? "#A32D2D" : "#1D9E75"} />
+          <KpiCard label="⏳ Actions en attente" value={actionsEnAttente} color={actionsEnAttente > 0 ? "#BA7517" : "#888"} sub="à relancer" />
+        </div>
 
       </div>
+
+      {/* ── VUE ÉVÉNEMENTS DU MOIS ── */}
+      {dashView === "evtMois" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={function() { setDashView("general"); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>← Retour</button>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>Événements de {MOIS_FR[now.getMonth()]} {now.getFullYear()} <span style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>({evtMois})</span></h3>
+          </div>
+          {evtMoisList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: 20 }}>Aucun événement ce mois-ci</div> : evtMoisList.map(function(e) {
+            return <DashEvtCard key={e.id} e={e} onGo={function() { setTab("evenements"); }} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
+          })}
+        </div>
+      )}
+
+      {/* ── VUE ÉVÉNEMENTS DE L'ANNÉE ── */}
+      {dashView === "evtAnnee" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <button onClick={function() { setDashView("general"); }} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>← Retour</button>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>Événements {now.getFullYear()} <span style={{ fontSize: 13, fontWeight: 400, color: "#888" }}>({evtAnnee})</span></h3>
+          </div>
+          {evtAnneeList.length === 0 ? <div style={{ fontSize: 13, color: "#aaa", padding: 20 }}>Aucun événement cette année</div> : evtAnneeList.map(function(e) {
+            return <DashEvtCard key={e.id} e={e} onGo={function() { setTab("evenements"); }} CONF_COLOR={CONF_COLOR} TYPE_EVT_COLOR={TYPE_EVT_COLOR} MOIS_FR={MOIS_FR} />;
+          })}
+        </div>
+      )}
 
       {/* MODAL NOUVELLE TÂCHE — géré dans le Dashboard */}
       <Modal open={tacheModal} onClose={function() { setTacheModal(false); setTacheForm(TEMPTY); setPartSearch(""); }} title="Nouvelle tâche">
@@ -504,6 +635,350 @@ function DocumentsSection(props) {
 }
 
 // ── FICHE PARTENAIRE ─────────────────────────────────────────
+// ── ASSOC INLINE (widget sélection partenaires associés) ──────
+function AssocInline(props) {
+  var all = props.all || []; var self = props.self;
+  var selected = props.selected; var onSelect = props.onSelect;
+  var search = props.search; var onSearch = props.onSearch;
+  var drop = props.drop; var onDrop = props.onDrop;
+  var filtered = all.filter(function(q) {
+    if (q.id === self || selected.indexOf(q.id) >= 0) return false;
+    var s = (search || "").trim().toLowerCase();
+    if (!s || s.length < 2) return false;
+    return (q.nom || "").toLowerCase().indexOf(s) >= 0;
+  });
+  return (
+    <div>
+      {/* Chips sélectionnés */}
+      {selected.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+          {selected.map(function(id) {
+            var q = all.find(function(x) { return x.id === id; });
+            if (!q) return null;
+            var tc = TYPE_COLOR[q.type] || "#888";
+            return (
+              <span key={id} style={{ display: "flex", alignItems: "center", gap: 5, background: tc + "18", color: tc, border: "1px solid " + tc + "44", borderRadius: 20, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>
+                {TYPE_ICON[q.type]} {q.nom}
+                <span onClick={function() { onSelect(selected.filter(function(x) { return x !== id; })); }} style={{ cursor: "pointer", marginLeft: 2, opacity: 0.7, fontWeight: 700 }}>×</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+      {/* Recherche */}
+      <div style={{ position: "relative" }}>
+        <input style={Object.assign({}, inp, { fontSize: 13 })} value={search} placeholder="Tapez un nom pour associer..." onChange={function(e) { onSearch(e.target.value); onDrop(true); }} onFocus={function() { onDrop(true); }} />
+        {search && <div onClick={function() { onSearch(""); onDrop(false); }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa", fontSize: 16 }}>×</div>}
+        {drop && (search || "").length >= 2 && (
+          <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 200, maxHeight: 180, overflowY: "auto" }}>
+            {filtered.length === 0 ? (
+              <div style={{ padding: "10px 14px", fontSize: 13, color: "#aaa" }}>Aucun résultat</div>
+            ) : filtered.map(function(q) {
+              var tc = TYPE_COLOR[q.type] || "#888";
+              return (
+                <div key={q.id} onClick={function() { onSelect(selected.concat(q.id)); onSearch(""); onDrop(false); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: 13, borderBottom: "1px solid #f4f4f4", display: "flex", alignItems: "center", gap: 8 }}
+                  onMouseEnter={function(e) { e.currentTarget.style.background = "#f4f4f4"; }}
+                  onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
+                  <span style={{ background: tc + "22", color: tc, padding: "1px 7px", borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{TYPE_ICON[q.type]} {q.type}</span>
+                  <span>{q.nom}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── LIAISONS PARTENAIRES ──────────────────────────────────────
+function LiaisonsPartenaire(props) {
+  var p = props.partenaire;
+  var allPartenaires = props.allPartenaires || [];
+  var openState = useState(false); var open = openState[0]; var setOpen = openState[1];
+  var liensState = useState([]); var liens = liensState[0]; var setLiens = liensState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
+  var showDropState = useState(false); var showDrop = showDropState[0]; var setShowDrop = showDropState[1];
+  var savingState = useState(false); var saving = savingState[0]; var setSaving = savingState[1];
+
+  useEffect(function() {
+    if (!open) return;
+    setLoading(true);
+    sbFetch("partenaire_liens", { select: "*", filter: "partenaire_id=eq." + p.id, order: "created_at.asc" })
+      .then(function(rows) { setLiens(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, [open, p.id]);
+
+  var linkedIds = liens.map(function(l) { return l.partenaire_lie_id; });
+  var filteredDrop = allPartenaires.filter(function(q) {
+    if (q.id === p.id || linkedIds.indexOf(q.id) >= 0) return false;
+    var s = search.trim().toLowerCase();
+    if (!s || s.length < 2) return false;
+    return (q.nom || "").toLowerCase().indexOf(s) >= 0;
+  });
+
+  function handleAdd(partnerId) {
+    setSaving(true);
+    sbInsert("partenaire_liens", { partenaire_id: p.id, partenaire_lie_id: partnerId })
+      .then(function(rows) {
+        setLiens(liens.concat(rows[0]));
+        setSearch(""); setShowDrop(false); setSaving(false);
+      }).catch(function(e) { alert(e.message); setSaving(false); });
+  }
+
+  function handleDelete(id) {
+    fetch(SUPABASE_URL + "/rest/v1/partenaire_liens?id=eq." + id, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } })
+      .then(function() { setLiens(liens.filter(function(l) { return l.id !== id; })); });
+  }
+
+  function getPartenaire(id) { return allPartenaires.find(function(q) { return q.id === id; }) || null; }
+
+  return (
+    <div style={{ padding: "16px 24px", borderTop: "1px solid #e8e8e8" }}>
+      <div onClick={function() { setOpen(!open); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 18 }}>🔗</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>Partenaires associés</span>
+          {liens.length > 0 && <span style={{ background: "#C8102E", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{liens.length}</span>}
+        </div>
+        <span style={{ fontSize: 16, color: "#888", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          {/* Barre de recherche inline */}
+          <div style={{ position: "relative", marginBottom: 12 }}>
+            <input style={Object.assign({}, inp, { paddingRight: 36 })} value={search} placeholder="🔍 Associer un partenaire..." onChange={function(e) { setSearch(e.target.value); setShowDrop(true); }} onFocus={function() { setShowDrop(true); }} />
+            {search && <div onClick={function() { setSearch(""); setShowDrop(false); }} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa", fontSize: 18, lineHeight: 1 }}>×</div>}
+            {showDrop && search.length >= 2 && (
+              <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: 220, overflowY: "auto" }}>
+                {filteredDrop.length === 0 ? (
+                  <div style={{ padding: "10px 14px", fontSize: 13, color: "#aaa" }}>Aucun résultat</div>
+                ) : filteredDrop.map(function(q) {
+                  var tc = TYPE_COLOR[q.type] || "#888";
+                  return (
+                    <div key={q.id} onClick={function() { handleAdd(q.id); }} style={{ padding: "9px 14px", cursor: "pointer", fontSize: 14, borderBottom: "1px solid #f4f4f4", display: "flex", alignItems: "center", gap: 8 }}
+                      onMouseEnter={function(e) { e.currentTarget.style.background = "#f4f4f4"; }}
+                      onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
+                      <span style={{ background: tc + "22", color: tc, padding: "1px 7px", borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{TYPE_ICON[q.type]} {q.type}</span>
+                      <span style={{ flex: 1 }}>{q.nom}</span>
+                      <span style={{ fontSize: 11, color: "#C8102E", fontWeight: 600 }}>+ Associer</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Liste des associations */}
+          {loading ? <Spinner /> : liens.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#aaa", textAlign: "center", padding: "12px 0" }}>Aucun partenaire associé</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {liens.map(function(l) {
+                var lie = getPartenaire(l.partenaire_lie_id);
+                var tc = lie ? (TYPE_COLOR[lie.type] || "#888") : "#ccc";
+                return (
+                  <div key={l.id} style={{ background: "#fafafa", border: "1px solid #e8e8e8", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+                    {lie ? <span style={{ background: tc + "22", color: tc, padding: "1px 7px", borderRadius: 12, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>{TYPE_ICON[lie.type]} {lie.type}</span> : null}
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 500, color: "#1a1a1a" }}>{lie ? lie.nom : <span style={{ color: "#aaa" }}>Partenaire supprimé</span>}</span>
+                    <button onClick={function() { handleDelete(l.id); }} style={{ padding: "2px 8px", borderRadius: 6, border: "1px solid #fdd", background: "#fff", color: "#E24B4A", cursor: "pointer", fontSize: 11, flexShrink: 0 }}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── ENFANTS SHELTER ───────────────────────────────────────────
+function EnfantsShelter(props) {
+  var p = props.partenaire;
+  var listState = useState([]); var enfants = listState[0]; var setEnfants = listState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var openState = useState(false); var open = openState[0]; var setOpen = openState[1];
+  var importingState = useState(false); var importing = importingState[0]; var setImporting = importingState[1];
+  var importErrState = useState(""); var importErr = importErrState[0]; var setImportErr = importErrState[1];
+  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
+  var addModalState = useState(false); var addModal = addModalState[0]; var setAddModal = addModalState[1];
+  var EMPTY_ENFANT = { nom: "", prenom: "", date_naissance: "", commentaire: "" };
+  var formState = useState(EMPTY_ENFANT); var form = formState[0]; var setForm = formState[1];
+
+  useEffect(function() {
+    if (!open) return;
+    sbFetch("enfants_shelter", { select: "*", filter: "partenaire_id=eq." + p.id, order: "nom.asc" })
+      .then(function(rows) { setEnfants(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, [open, p.id]);
+
+  function calcAge(dob) {
+    if (!dob) return "—";
+    var diff = Date.now() - new Date(dob).getTime();
+    return Math.floor(diff / (365.25 * 24 * 3600 * 1000)) + " ans";
+  }
+
+  function parseCSV(text) {
+    var lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    var header = lines[0].split(/[,;]/).map(function(h) { return h.trim().toLowerCase().replace(/["\s]/g,""); });
+    var find = function(keys) {
+      for (var i = 0; i < keys.length; i++) {
+        var idx = header.findIndex(function(h) { return h.indexOf(keys[i]) >= 0; });
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    };
+    var iNom = find(["nom","lastname","name"]); var iPrenom = find(["prenom","firstname","first"]); var iDob = find(["datenaissance","dateofbirth","dob","naissance","birth"]); var iCom = find(["commentaire","comment","note","notes","remarque"]);
+    return lines.slice(1).map(function(line) {
+      var cols = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(function(c) { return c.trim().replace(/^"|"$/g,""); });
+      return { nom: iNom >= 0 ? cols[iNom] || "" : "", prenom: iPrenom >= 0 ? cols[iPrenom] || "" : "", date_naissance: iDob >= 0 ? cols[iDob] || "" : "", commentaire: iCom >= 0 ? cols[iCom] || "" : "" };
+    }).filter(function(r) { return r.nom || r.prenom; });
+  }
+
+  function handleCSVImport(file) {
+    if (!file) return;
+    setImporting(true); setImportErr("");
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var rows = parseCSV(ev.target.result);
+      if (!rows.length) { setImportErr("Aucune ligne valide trouvée. Vérifiez les colonnes : NOM, PRENOM, DATE_NAISSANCE, COMMENTAIRE"); setImporting(false); return; }
+      var payloads = rows.map(function(r) { return Object.assign({}, r, { partenaire_id: p.id }); });
+      sbInsertMany("enfants_shelter", payloads)
+        .then(function(inserted) {
+          setEnfants(enfants.concat(inserted).sort(function(a,b){ return (a.nom||"").localeCompare(b.nom||""); }));
+          setImporting(false);
+          setImportErr("✓ " + inserted.length + " enfant" + (inserted.length > 1 ? "s" : "") + " importé" + (inserted.length > 1 ? "s" : "") + " avec succès.");
+        })
+        .catch(function(e) { setImportErr("Erreur import : " + e.message); setImporting(false); });
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  function handleAddManuel() {
+    var payload = Object.assign({}, form, { partenaire_id: p.id });
+    sbInsert("enfants_shelter", payload).then(function(rows) {
+      setEnfants(enfants.concat(rows[0]).sort(function(a,b){ return (a.nom||"").localeCompare(b.nom||""); }));
+      setAddModal(false); setForm(EMPTY_ENFANT);
+    }).catch(function(e) { alert(e.message); });
+  }
+
+  function handleDelete(id) {
+    if (!window.confirm("Supprimer cet enfant de la liste ?")) return;
+    fetch(SUPABASE_URL + "/rest/v1/enfants_shelter?id=eq." + id, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } })
+      .then(function() { setEnfants(enfants.filter(function(e) { return e.id !== id; })); });
+  }
+
+  function handleExport() {
+    var header = ["Nom","Prénom","Date de naissance","Âge","Commentaire"];
+    var rows = enfants.map(function(e) {
+      return [e.nom, e.prenom, e.date_naissance, calcAge(e.date_naissance), e.commentaire]
+        .map(function(v) { return '"' + String(v||"").replace(/"/g,'""') + '"'; }).join(",");
+    });
+    var csv = [header.join(",")].concat(rows).join("\n");
+    var blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a"); a.href = url; a.download = "enfants_" + p.nom.replace(/\s+/g,"_").toLowerCase() + ".csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  var filtered = enfants.filter(function(e) {
+    var q = search.trim().toLowerCase();
+    if (!q) return true;
+    return ((e.nom||"") + " " + (e.prenom||"")).toLowerCase().indexOf(q) >= 0;
+  });
+
+  return (
+    <div style={{ padding: "16px 24px", borderTop: "1px solid #e8e8e8" }}>
+      {/* Header accordéon */}
+      <div onClick={function() { setOpen(!open); }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 18 }}>👦</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>Liste des enfants</span>
+          {enfants.length > 0 && <span style={{ background: "#C8102E", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{enfants.length}</span>}
+        </div>
+        <span style={{ fontSize: 16, color: "#888", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          {/* Barre d'outils */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+            <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher..." style={{ flex: "1 1 160px", padding: "7px 10px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 13, outline: "none" }} />
+            <button onClick={function() { setAddModal(true); }} style={Object.assign({}, btnA, { fontSize: 12 })}>+ Ajouter</button>
+            <label style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #C8102E", background: importing ? "#f4f4f4" : "#C8102E11", color: "#C8102E", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+              {importing ? "Import…" : "⬆ Import CSV"}
+              <input type="file" accept=".csv" style={{ display: "none" }} onChange={function(e) { handleCSVImport(e.target.files[0]); e.target.value=""; }} disabled={importing} />
+            </label>
+            {enfants.length > 0 && <button onClick={handleExport} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", color: "#444", cursor: "pointer", fontSize: 12, fontWeight: 500 }}>⬇ Export CSV</button>}
+          </div>
+
+          {/* Message import */}
+          {importErr && <div style={{ fontSize: 12, marginBottom: 10, color: importErr.startsWith("✓") ? "#1D9E75" : "#C8102E", background: importErr.startsWith("✓") ? "#1D9E7511" : "#C8102E11", padding: "6px 10px", borderRadius: 8 }}>{importErr}</div>}
+
+          {/* Info format CSV */}
+          <div style={{ fontSize: 11, color: "#aaa", marginBottom: 10 }}>
+            Format CSV attendu : <code style={{ background: "#f4f4f4", padding: "1px 4px", borderRadius: 4 }}>NOM, PRENOM, DATE_NAISSANCE, COMMENTAIRE</code>
+          </div>
+
+          {/* Tableau */}
+          {loading ? <Spinner /> : filtered.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#aaa", textAlign: "center", padding: "20px 0" }}>{search ? "Aucun résultat" : "Aucun enfant enregistré"}</div>
+          ) : (
+            <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid #e0e0e0" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: "#f4f4f4" }}>
+                    {["NOM", "PRÉNOM", "DATE NAISSANCE", "ÂGE", "COMMENTAIRE", ""].map(function(h) {
+                      return <th key={h} style={{ padding: "8px 10px", fontSize: 11, fontWeight: 600, color: "#888", textAlign: "left", borderBottom: "1px solid #e0e0e0", whiteSpace: "nowrap" }}>{h}</th>;
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(function(e) {
+                    return (
+                      <tr key={e.id} style={{ borderBottom: "1px solid #f4f4f4" }}
+                        onMouseEnter={function(el) { el.currentTarget.style.background="#fafafa"; }}
+                        onMouseLeave={function(el) { el.currentTarget.style.background=""; }}>
+                        <td style={{ padding: "8px 10px", fontWeight: 600, color: "#1a1a1a" }}>{e.nom}</td>
+                        <td style={{ padding: "8px 10px", color: "#444" }}>{e.prenom}</td>
+                        <td style={{ padding: "8px 10px", color: "#666", whiteSpace: "nowrap" }}>{e.date_naissance || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#C8102E", fontWeight: 600, whiteSpace: "nowrap" }}>{calcAge(e.date_naissance)}</td>
+                        <td style={{ padding: "8px 10px", color: "#888", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.commentaire || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>
+                          <button onClick={function() { handleDelete(e.id); }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #fdd", background: "#fff", color: "#E24B4A", cursor: "pointer", fontSize: 11 }}>🗑️</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Modal ajout manuel */}
+          <Modal open={addModal} onClose={function() { setAddModal(false); setForm(EMPTY_ENFANT); }} title="Ajouter un enfant">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <Field label="Nom *"><input style={inp} value={form.nom} onChange={function(e) { setForm(Object.assign({}, form, { nom: e.target.value })); }} /></Field>
+              <Field label="Prénom *"><input style={inp} value={form.prenom} onChange={function(e) { setForm(Object.assign({}, form, { prenom: e.target.value })); }} /></Field>
+            </div>
+            <Field label="Date de naissance"><input type="date" style={inp} value={form.date_naissance} onChange={function(e) { setForm(Object.assign({}, form, { date_naissance: e.target.value })); }} /></Field>
+            <Field label="Commentaire"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={form.commentaire} onChange={function(e) { setForm(Object.assign({}, form, { commentaire: e.target.value })); }} /></Field>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+              <button onClick={function() { setAddModal(false); setForm(EMPTY_ENFANT); }} style={btnS}>Annuler</button>
+              <button onClick={handleAddManuel} disabled={!form.nom && !form.prenom} style={Object.assign({}, btnP, { opacity: (form.nom || form.prenom) ? 1 : 0.5 })}>Enregistrer</button>
+            </div>
+          </Modal>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── FICHE PARTENAIRE ──────────────────────────────────────────
 function FichePartenaire(props) {
   var p = props.partenaire;
   var onClose = props.onClose;
@@ -697,7 +1172,7 @@ function FichePartenaire(props) {
 
         {/* Événements associés */}
         {evts.length > 0 && (
-          <div style={{ marginTop: 24 }}>
+          <div style={{ padding: "0 24px", marginTop: 0 }}>
             <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>📅 Événements associés ({evts.length})</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {evts.map(function(e) {
@@ -723,32 +1198,11 @@ function FichePartenaire(props) {
           </div>
         )}
 
-        {/* Événements associés */}
-        {evts.length > 0 && (
-          <div style={{ marginTop: 24 }}>
-            <h3 style={{ margin: "0 0 12px", fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>📅 Événements associés ({evts.length})</h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {evts.map(function(e) {
-                var EVT_COLOR = { Planifie: "#C8102E", "En cours": "#9B1C1C", Termine: "#1D9E75", Annule: "#A32D2D" };
-                var color = EVT_COLOR[e.statut] || "#888";
-                return (
-                  <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 10, padding: "10px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{ width: 4, height: 36, borderRadius: 4, background: color, flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
-                      <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>
-                        {e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}
-                        {e.lieu ? " · " + e.lieu : ""}
-                        {e.nombre_enfants_presents > 0 ? " · " + e.nombre_enfants_presents + " enfants" : ""}
-                      </div>
-                    </div>
-                    <span style={{ background: color + "22", color: color, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 500 }}>{e.statut}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Liste enfants — Shelters uniquement */}
+        {p.type === "Shelter" && <EnfantsShelter partenaire={p} />}
+
+        {/* Liaisons entre partenaires */}
+        <LiaisonsPartenaire partenaire={p} allPartenaires={props.allPartenaires || []} />
 
         <DocumentsSection entityType="partenaire" entityId={p.id} />
 
@@ -929,9 +1383,14 @@ function Partenaires() {
     if (payload.nombre_enfants === "") delete payload.nombre_enfants;
     if (payload.montant_annuel === "") payload.montant_annuel = 0;
     sbInsert("partenaires", payload).then(function(rows) {
-      setData(data.concat(rows[0]));
-      setModal(false);
-      setForm(EMPTY_FORM);
+      var newP = rows[0];
+      setData(data.concat(newP));
+      // Créer les associations sélectionnées
+      if (assocSelectedAdd.length > 0) {
+        var liens = assocSelectedAdd.map(function(id) { return { partenaire_id: newP.id, partenaire_lie_id: id }; });
+        sbInsertMany("partenaire_liens", liens).catch(function() {});
+      }
+      setModal(false); setForm(EMPTY_FORM); setAssocSelectedAdd([]); setAssocSearchAdd("");
     }).catch(function(e) { alert("Erreur: " + e.message); });
   }
 
@@ -942,12 +1401,29 @@ function Partenaires() {
     if (payload.montant_annuel === "") payload.montant_annuel = 0;
     sbUpdate("partenaires", editForm.id, payload).then(function() {
       setData(data.map(function(p) { return p.id === editForm.id ? Object.assign({}, p, payload) : p; }));
-      setEditModal(false);
-      setEditForm(null);
+      // Remplacer les associations : supprimer les anciennes, insérer les nouvelles
+      fetch(SUPABASE_URL + "/rest/v1/partenaire_liens?partenaire_id=eq." + editForm.id, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } })
+        .then(function() {
+          if (assocSelectedEdit.length > 0) {
+            var liens = assocSelectedEdit.map(function(id) { return { partenaire_id: editForm.id, partenaire_lie_id: id }; });
+            sbInsertMany("partenaire_liens", liens).catch(function() {});
+          }
+        });
+      setEditModal(false); setEditForm(null); setAssocSelectedEdit([]); setAssocSearchEdit("");
     }).catch(function(e) { alert("Erreur: " + e.message); });
   }
 
   function setEdit(k, v) { setEditForm(Object.assign({}, editForm, { [k]: v })); }
+
+  // Charger les associations existantes quand on ouvre la modale Modifier
+  function openEditModal(p) {
+    setEditForm(p);
+    setAssocSelectedEdit([]); setAssocSearchEdit("");
+    sbFetch("partenaire_liens", { select: "partenaire_lie_id", filter: "partenaire_id=eq." + p.id })
+      .then(function(rows) { setAssocSelectedEdit(rows.map(function(r) { return r.partenaire_lie_id; })); })
+      .catch(function() {});
+    setEditModal(true);
+  }
 
   function handleConvert() {
     if (!convertTarget) return;
@@ -976,6 +1452,14 @@ function Partenaires() {
 
   var exportPanelState = useState(false); var exportPanel = exportPanelState[0]; var setExportPanel = exportPanelState[1];
   var exportTargetState = useState("tous"); var exportTarget = exportTargetState[0]; var setExportTarget = exportTargetState[1];
+
+  // États pour associations inline dans les modales
+  var assocSearchAddState = useState(""); var assocSearchAdd = assocSearchAddState[0]; var setAssocSearchAdd = assocSearchAddState[1];
+  var assocSelectedAddState = useState([]); var assocSelectedAdd = assocSelectedAddState[0]; var setAssocSelectedAdd = assocSelectedAddState[1];
+  var assocDropAddState = useState(false); var assocDropAdd = assocDropAddState[0]; var setAssocDropAdd = assocDropAddState[1];
+  var assocSearchEditState = useState(""); var assocSearchEdit = assocSearchEditState[0]; var setAssocSearchEdit = assocSearchEditState[1];
+  var assocSelectedEditState = useState([]); var assocSelectedEdit = assocSelectedEditState[0]; var setAssocSelectedEdit = assocSelectedEditState[1];
+  var assocDropEditState = useState(false); var assocDropEdit = assocDropEditState[0]; var setAssocDropEdit = assocDropEditState[1];
 
   function handleExportContacts() {
     var rows, filename;
@@ -1051,7 +1535,7 @@ function Partenaires() {
           })}
           {/* Onglet Prospects */}
           <button onClick={function() { setFiltre("Prospects"); }} style={{ padding: "5px 14px", borderRadius: 20, border: "1px solid " + (filtre === "Prospects" ? PROSPECT_COLOR : "#ddd"), background: filtre === "Prospects" ? PROSPECT_COLOR : "#fff", color: filtre === "Prospects" ? "#fff" : "#555", cursor: "pointer", fontSize: 13, fontWeight: filtre === "Prospects" ? 600 : 400 }}>
-            🎯 Prospects <span style={{ background: filtre === "Prospects" ? "rgba(255,255,255,0.25)" : PROSPECT_COLOR + "22", color: filtre === "Prospects" ? "#fff" : PROSPECT_COLOR, borderRadius: 20, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>{totalNonConverts}</span>
+            📋 Contacts <span style={{ background: filtre === "Prospects" ? "rgba(255,255,255,0.25)" : PROSPECT_COLOR + "22", color: filtre === "Prospects" ? "#fff" : PROSPECT_COLOR, borderRadius: 20, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>{totalNonConverts}</span>
           </button>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
@@ -1158,7 +1642,7 @@ function Partenaires() {
                   <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.contact_email || "—"}</td>
                   <td style={{ padding: "10px 12px", fontSize: 13, color: "#444" }}>{p.contact_tel || "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
-                    <button onClick={function(e) { e.stopPropagation(); setEditForm(p); setEditModal(true); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#C8102E" }}>✏️ Modifier</button>
+                    <button onClick={function(e) { e.stopPropagation(); openEditModal(p); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#C8102E" }}>✏️ Modifier</button>
                   </td>
                 </tr>
               );
@@ -1227,13 +1711,16 @@ function Partenaires() {
           </Field>
         </div>
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={editForm.notes || ""} onChange={function(e) { setEdit("notes", e.target.value); }} /></Field>
+        <Field label="Partenaires associés">
+          <AssocInline all={data} self={editForm.id} selected={assocSelectedEdit} onSelect={setAssocSelectedEdit} search={assocSearchEdit} onSearch={setAssocSearchEdit} drop={assocDropEdit} onDrop={setAssocDropEdit} />
+        </Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setEditModal(false); }} style={btnS}>Annuler</button>
           <button onClick={handleUpdate} style={btnP}>Enregistrer</button>
         </div>
       </Modal>}
 
-      {ficheId && <FichePartenaire partenaire={data.find(function(p) { return p.id === ficheId; }) || {}} onClose={function() { setFicheId(null); }} />}
+      {ficheId && <FichePartenaire partenaire={data.find(function(p) { return p.id === ficheId; }) || {}} allPartenaires={data} onClose={function() { setFicheId(null); }} />}
 
       <Modal open={modal} onClose={function() { setModal(false); }} title="Nouveau partenaire">
         <Field label="Type *">
@@ -1265,6 +1752,9 @@ function Partenaires() {
           </select>
         </Field>
         <Field label="Notes"><textarea style={Object.assign({}, inp, { resize: "vertical", minHeight: 60 })} value={form.notes} onChange={function(e) { set("notes", e.target.value); }} /></Field>
+        <Field label="Partenaires associés">
+          <AssocInline all={data} self={null} selected={assocSelectedAdd} onSelect={setAssocSelectedAdd} search={assocSearchAdd} onSearch={setAssocSearchAdd} drop={assocDropAdd} onDrop={setAssocDropAdd} />
+        </Field>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
           <button onClick={function() { setModal(false); }} style={btnS}>Annuler</button>
           <button onClick={handleAdd} disabled={!form.nom} style={Object.assign({}, btnP, { opacity: form.nom ? 1 : 0.5 })}>Enregistrer</button>
