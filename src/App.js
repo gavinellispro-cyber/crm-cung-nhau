@@ -3403,6 +3403,199 @@ function Taches(props) {
 }
 
 // ── APP ───────────────────────────────────────────────────────
+// ── UTILISATEURS (modifiable uniquement ici dans le code) ─────
+var USERS = [
+  { id: 1, nom: "Gavin",   login: "gavin",   password: "rcn2024!", role: "admin" },
+  { id: 2, nom: "Eric",    login: "eric",    password: "rcn2024!", role: "user"  },
+  { id: 3, nom: "Francois",login: "francois",password: "rcn2024!", role: "user"  },
+];
+
+// ── ÉCRAN LOGIN ───────────────────────────────────────────────
+function LoginScreen(props) {
+  var onLogin = props.onLogin;
+  var loginState = useState(""); var login = loginState[0]; var setLogin = loginState[1];
+  var passState = useState(""); var pass = passState[0]; var setPass = passState[1];
+  var errState = useState(""); var err = errState[0]; var setErr = errState[1];
+  var showPassState = useState(false); var showPass = showPassState[0]; var setShowPass = showPassState[1];
+
+  function handleSubmit() {
+    var user = USERS.find(function(u) { return u.login === login.trim().toLowerCase() && u.password === pass; });
+    if (user) { setErr(""); onLogin(user); }
+    else { setErr("Identifiant ou mot de passe incorrect."); }
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif" }}>
+      <div style={{ width: "100%", maxWidth: 380, padding: "0 24px" }}>
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+            <img src="data:image/png;base64,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" alt="RCN" style={{ height: 80, objectFit: "contain" }} />
+            <div style={{ color: "#fff", fontSize: 22, fontWeight: 800, letterSpacing: 1 }}>Cung Nhau CRM</div>
+          </div>
+        </div>
+
+        {/* Formulaire */}
+        <div style={{ background: "#2a2a2a", borderRadius: 16, padding: "28px 24px" }}>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Identifiant</label>
+            <input value={login} onChange={function(e) { setLogin(e.target.value); setErr(""); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="Votre identifiant" style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Mot de passe</label>
+            <div style={{ position: "relative" }}>
+              <input type={showPass ? "text" : "password"} value={pass} onChange={function(e) { setPass(e.target.value); setErr(""); }} onKeyDown={function(e) { if (e.key === "Enter") handleSubmit(); }} placeholder="••••••••" style={{ width: "100%", padding: "12px 44px 12px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.07)", color: "#fff", fontSize: 14, outline: "none", boxSizing: "border-box" }} />
+              <div onClick={function() { setShowPass(!showPass); }} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: 16 }}>{showPass ? "🙈" : "👁️"}</div>
+            </div>
+          </div>
+          {err && <div style={{ color: "#E24B4A", fontSize: 13, marginBottom: 14, padding: "8px 12px", background: "#E24B4A11", borderRadius: 8 }}>{err}</div>}
+          <button onClick={handleSubmit} style={{ width: "100%", padding: "13px", borderRadius: 10, border: "none", background: "#C8102E", color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", letterSpacing: 0.5 }}>Se connecter</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PANNEAU ADMIN ─────────────────────────────────────────────
+function AdminPanel(props) {
+  var currentUser = props.currentUser;
+  var onClose = props.onClose;
+  var usersState = useState(USERS.map(function(u) { return Object.assign({}, u); })); var users = usersState[0]; var setUsers = usersState[1];
+  var editingState = useState(null); var editing = editingState[0]; var setEditing = editingState[1];
+  var addingState = useState(false); var adding = addingState[0]; var setAdding = addingState[1];
+  var EMPTY_USER = { nom: "", login: "", password: "", role: "user" };
+  var newUserState = useState(EMPTY_USER); var newUser = newUserState[0]; var setNewUser = newUserState[1];
+  var showPassState = useState({}); var showPass = showPassState[0]; var setShowPass = showPassState[1];
+
+  function togglePass(id) { setShowPass(Object.assign({}, showPass, { [id]: !showPass[id] })); }
+
+  function saveEdit(id) {
+    var idx = USERS.findIndex(function(u) { return u.id === id; });
+    if (idx >= 0) {
+      USERS[idx] = Object.assign({}, editing);
+      setUsers(USERS.map(function(u) { return Object.assign({}, u); }));
+    }
+    setEditing(null);
+  }
+
+  function deleteUser(id) {
+    if (id === currentUser.id) { alert("Vous ne pouvez pas supprimer votre propre compte."); return; }
+    if (!window.confirm("Supprimer cet utilisateur ?")) return;
+    var idx = USERS.findIndex(function(u) { return u.id === id; });
+    if (idx >= 0) USERS.splice(idx, 1);
+    setUsers(USERS.map(function(u) { return Object.assign({}, u); }));
+  }
+
+  function addUser() {
+    if (!newUser.nom || !newUser.login || !newUser.password) { alert("Nom, identifiant et mot de passe sont requis."); return; }
+    var maxId = USERS.reduce(function(m, u) { return Math.max(m, u.id); }, 0);
+    USERS.push(Object.assign({}, newUser, { id: maxId + 1 }));
+    setUsers(USERS.map(function(u) { return Object.assign({}, u); }));
+    setNewUser(EMPTY_USER); setAdding(false);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 560, maxHeight: "90vh", overflowY: "auto", boxShadow: "0 16px 48px rgba(0,0,0,0.3)" }}>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8e8e8", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1a1a1a", borderRadius: "16px 16px 0 0" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>⚙️</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>Administration — Utilisateurs</span>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.6)", fontSize: 22, cursor: "pointer" }}>×</button>
+        </div>
+        <div style={{ padding: "20px 24px" }}>
+          <div style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 13, color: "#888" }}>{users.length} utilisateur{users.length > 1 ? "s" : ""}</span>
+            <button onClick={function() { setAdding(true); setEditing(null); }} style={Object.assign({}, btnA, { fontSize: 12 })}>+ Ajouter</button>
+          </div>
+
+          {/* Formulaire ajout */}
+          {adding && (
+            <div style={{ background: "#f4f4f4", borderRadius: 10, padding: "14px 16px", marginBottom: 14, border: "2px solid #C8102E22" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#C8102E", marginBottom: 12 }}>Nouvel utilisateur</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Nom</label><input style={inp} value={newUser.nom} onChange={function(e) { setNewUser(Object.assign({}, newUser, { nom: e.target.value })); }} /></div>
+                <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Identifiant</label><input style={inp} value={newUser.login} onChange={function(e) { setNewUser(Object.assign({}, newUser, { login: e.target.value.toLowerCase() })); }} /></div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Mot de passe</label><input style={inp} value={newUser.password} onChange={function(e) { setNewUser(Object.assign({}, newUser, { password: e.target.value })); }} /></div>
+                <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Rôle</label>
+                  <select style={sel} value={newUser.role} onChange={function(e) { setNewUser(Object.assign({}, newUser, { role: e.target.value })); }}>
+                    <option value="user">Utilisateur</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={function() { setAdding(false); setNewUser(EMPTY_USER); }} style={btnS}>Annuler</button>
+                <button onClick={addUser} style={btnP}>Créer</button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste utilisateurs */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {users.map(function(u) {
+              var isMe = u.id === currentUser.id;
+              var isEditing = editing && editing.id === u.id;
+              return (
+                <div key={u.id} style={{ border: "1px solid " + (isMe ? "#C8102E44" : "#e8e8e8"), borderRadius: 10, overflow: "hidden" }}>
+                  {/* En-tête */}
+                  <div style={{ padding: "12px 14px", background: isMe ? "#C8102E08" : "#fafafa", display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: isMe ? "#C8102E" : "#1a1a1a", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14, flexShrink: 0 }}>{u.nom[0]}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{u.nom} {isMe && <span style={{ fontSize: 11, color: "#C8102E", fontWeight: 500 }}>(vous)</span>}</div>
+                      <div style={{ fontSize: 12, color: "#888" }}>@{u.login} · <span style={{ color: u.role === "admin" ? "#C8102E" : "#888", fontWeight: u.role === "admin" ? 600 : 400 }}>{u.role === "admin" ? "Admin" : "Utilisateur"}</span></div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {!isEditing && <button onClick={function() { setEditing(Object.assign({}, u)); setAdding(false); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#444" }}>✏️ Modifier</button>}
+                      {!isMe && <button onClick={function() { deleteUser(u.id); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #fdd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#E24B4A" }}>🗑️</button>}
+                    </div>
+                  </div>
+
+                  {/* Formulaire édition inline */}
+                  {isEditing && (
+                    <div style={{ padding: "14px 14px", borderTop: "1px solid #e8e8e8" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                        <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Nom</label><input style={inp} value={editing.nom} onChange={function(e) { setEditing(Object.assign({}, editing, { nom: e.target.value })); }} /></div>
+                        <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Identifiant</label><input style={inp} value={editing.login} onChange={function(e) { setEditing(Object.assign({}, editing, { login: e.target.value.toLowerCase() })); }} /></div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Mot de passe</label>
+                          <div style={{ position: "relative" }}>
+                            <input type={showPass[u.id] ? "text" : "password"} style={inp} value={editing.password} onChange={function(e) { setEditing(Object.assign({}, editing, { password: e.target.value })); }} />
+                            <div onClick={function() { togglePass(u.id); }} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "#aaa" }}>{showPass[u.id] ? "🙈" : "👁️"}</div>
+                          </div>
+                        </div>
+                        <div><label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Rôle</label>
+                          <select style={sel} value={editing.role} onChange={function(e) { setEditing(Object.assign({}, editing, { role: e.target.value })); }}>
+                            <option value="user">Utilisateur</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button onClick={function() { setEditing(null); }} style={btnS}>Annuler</button>
+                        <button onClick={function() { saveEdit(u.id); }} style={btnP}>Enregistrer</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop: 16, padding: "10px 14px", background: "#fff8e1", borderRadius: 8, fontSize: 12, color: "#BA7517" }}>
+            ⚠️ Les modifications sont actives immédiatement mais ne persistent pas si la page est rechargée. Pour les rendre permanentes, modifiez directement le tableau <code>USERS</code> dans le fichier JSX.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 var TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "partenaires", label: "Partenaires" },
@@ -3415,6 +3608,24 @@ export default function App() {
   var otm = useState(false); var openTacheModal = otm[0]; var setOpenTacheModal = otm[1];
   var dvs = useState("general"); var dashView = dvs[0]; var setDashView = dvs[1];
   var notifState = useState([]); var notifications = notifState[0]; var setNotifications = notifState[1];
+
+  // Auth
+  var sessionKey = "rcn_user";
+  var storedUser = (function() { try { var s = sessionStorage.getItem(sessionKey); return s ? JSON.parse(s) : null; } catch(e) { return null; } })();
+  var userState = useState(storedUser); var currentUser = userState[0]; var setCurrentUser = userState[1];
+  var adminState = useState(false); var adminOpen = adminState[0]; var setAdminOpen = adminState[1];
+
+  function handleLogin(user) {
+    sessionStorage.setItem(sessionKey, JSON.stringify(user));
+    setCurrentUser(user);
+  }
+  function handleLogout() {
+    sessionStorage.removeItem(sessionKey);
+    setCurrentUser(null);
+  }
+
+  if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
+
 
   useEffect(function() {
     var today = new Date().toISOString().split("T")[0];
@@ -3447,6 +3658,15 @@ export default function App() {
               return <button key={t.id} onClick={function() { setTab(t.id); }} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tab === t.id ? "#C8102E" : "transparent", color: tab === t.id ? "#fff" : "rgba(255,255,255,0.65)", cursor: "pointer", fontSize: 14, fontWeight: tab === t.id ? 600 : 400 }}>{t.label}</button>;
             })}
           </nav>
+          {/* User badge */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, paddingLeft: 8, borderLeft: "1px solid rgba(255,255,255,0.15)" }}>
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#C8102E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#fff" }}>{currentUser.nom[0]}</div>
+            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>{currentUser.nom}</span>
+            {currentUser.role === "admin" && (
+              <button onClick={function() { setAdminOpen(true); }} title="Administration" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 12 }}>⚙️</button>
+            )}
+            <button onClick={handleLogout} title="Se déconnecter" style={{ padding: "4px 8px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.15)", background: "transparent", color: "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 12 }}>⏏</button>
+          </div>
           </div>
         </div>
       </div>
@@ -3456,6 +3676,7 @@ export default function App() {
         {tab === "evenements" && <Evenements />}
         {tab === "coaches" && <Coaches />}
       </div>
+      {adminOpen && <AdminPanel currentUser={currentUser} onClose={function() { setAdminOpen(false); }} />}
     </div>
   );
 }
