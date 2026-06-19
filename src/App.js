@@ -2142,7 +2142,7 @@ function Evenements() {
   var dupMonthState = useState(function() { return new Date(); }); var dupMonth = dupMonthState[0]; var setDupMonth = dupMonthState[1];
   var dupLoadingState = useState(false); var dupLoading = dupLoadingState[0]; var setDupLoading = dupLoadingState[1];
 
-  var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "", confirmation_statut: "En attente", responsable_coach_id: "" };
+  var EMPTY_FORM = { titre: "", type: "Entrainement", date_debut: "", lieu: "", nombre_enfants_presents: "", statut: "Planifie", notes: "", confirmation_statut: "En attente", responsable_coach_id: "", responsable_equipement_id: "" };
   var fs = useState(EMPTY_FORM); var form = fs[0]; var setForm = fs[1];
   var selONG = useState([]); var selectedONG = selONG[0]; var setSelectedONG = selONG[1];
   var selShelter = useState([]); var selectedShelter = selShelter[0]; var setSelectedShelter = selShelter[1];
@@ -2252,7 +2252,7 @@ function Evenements() {
   }
 
   function handleUpdateEvt() {
-    var payload = { titre: editingEvt.titre, type: editingEvt.type, date_debut: editingEvt.date_debut, lieu: editingEvt.lieu, nombre_enfants_presents: editingEvt.nombre_enfants_presents || null, statut: editingEvt.statut, notes: editingEvt.notes, confirmation_statut: editingEvt.confirmation_statut, responsable_coach_id: editingEvt.responsable_coach_id || null };
+    var payload = { titre: editingEvt.titre, type: editingEvt.type, date_debut: editingEvt.date_debut, lieu: editingEvt.lieu, nombre_enfants_presents: editingEvt.nombre_enfants_presents || null, statut: editingEvt.statut, notes: editingEvt.notes, confirmation_statut: editingEvt.confirmation_statut, responsable_coach_id: editingEvt.responsable_coach_id || null, responsable_equipement_id: editingEvt.responsable_equipement_id || null };
     sbUpdate("evenements", editingEvt.id, payload)
     .then(function() {
       return fetch(SUPABASE_URL + "/rest/v1/evenement_coaches?evenement_id=eq." + editingEvt.id, {
@@ -2489,6 +2489,10 @@ function Evenements() {
                       var resp = coaches.find(function(c) { return c.id === e.responsable_coach_id; });
                       return resp ? <div style={{ fontSize: 13, color: "#C8102E", marginTop: 8, fontWeight: 500 }}>👤 Responsable : {resp.prenom} {resp.nom}</div> : null;
                     })()}
+                    {e.responsable_equipement_id && (function() {
+                      var resp = coaches.find(function(c) { return c.id === e.responsable_equipement_id; });
+                      return resp ? <div style={{ fontSize: 13, color: "#BA7517", marginTop: 4, fontWeight: 500 }}>🎒 Équipement : {resp.prenom} {resp.nom}</div> : null;
+                    })()}
                     {e.notes && <div style={{ fontSize: 13, color: "#444", marginTop: 6 }}>{e.notes}</div>}
                     <div style={{ borderTop: "1px solid #e8e8e8", marginTop: 12, paddingTop: 4 }}>
                       <EvtTaches evtId={e.id} />
@@ -2565,6 +2569,12 @@ function Evenements() {
           </Field>
           <Field label="Responsable">
             <select style={sel} value={editingEvt.responsable_coach_id || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { responsable_coach_id: e.target.value })); }}>
+              <option value="">— Aucun —</option>
+              {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
+            </select>
+          </Field>
+          <Field label="Responsable équipement">
+            <select style={sel} value={editingEvt.responsable_equipement_id || ""} onChange={function(e) { setEditingEvt(Object.assign({}, editingEvt, { responsable_equipement_id: e.target.value })); }}>
               <option value="">— Aucun —</option>
               {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
             </select>
@@ -2666,6 +2676,12 @@ function Evenements() {
           </Field>
           <Field label="Responsable">
             <select style={sel} value={form.responsable_coach_id} onChange={function(e) { set("responsable_coach_id", e.target.value); }}>
+              <option value="">— Aucun —</option>
+              {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
+            </select>
+          </Field>
+          <Field label="Responsable équipement">
+            <select style={sel} value={form.responsable_equipement_id} onChange={function(e) { set("responsable_equipement_id", e.target.value); }}>
               <option value="">— Aucun —</option>
               {coaches.map(function(c) { return <option key={c.id} value={c.id}>{c.prenom} {c.nom}</option>; })}
             </select>
@@ -3694,11 +3710,249 @@ function AdminPanel(props) {
 }
 
 
+// ── ÉQUIPEMENT ────────────────────────────────────────────────
+var CATEGORIES_EQUIPEMENT = [
+  { id: "ballon",          label: "Ballon",           icon: "🏉", color: "#C8102E" },
+  { id: "cone",            label: "Cône",             icon: "🔺", color: "#BA7517" },
+  { id: "chasuble",        label: "Chasuble",         icon: "🦺", color: "#1D9E75" },
+  { id: "vetement_enfant", label: "Vêtement enfants", icon: "👕", color: "#185FA5" },
+  { id: "polo_coach",      label: "Polo coach",       icon: "👔", color: "#534AB7" },
+  { id: "autre",           label: "Autre",            icon: "📦", color: "#888"    },
+];
+
+function Equipement() {
+  var dataState = useState([]); var data = dataState[0]; var setData = dataState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var addModalState = useState(false); var addModal = addModalState[0]; var setAddModal = addModalState[1];
+  var editModalState = useState(null); var editItem = editModalState[0]; var setEditItem = editModalState[1];
+  var updatingState = useState(null); var updating = updatingState[0]; var setUpdating = updatingState[1];
+
+  // Formulaire ajout
+  var EMPTY = { nom: "", categorie: "ballon", quantite: 0, seuil_alerte: 0, notes: "" };
+  var formState = useState(EMPTY); var form = formState[0]; var setForm = formState[1];
+  var savingState = useState(false); var saving = savingState[0]; var setSaving = savingState[1];
+
+  useEffect(function() {
+    sbFetch("equipements", { select: "*", order: "categorie.asc,nom.asc" })
+      .then(function(rows) { setData(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, []);
+
+  function handleAdd() {
+    if (!form.nom) return;
+    setSaving(true);
+    sbInsert("equipements", { nom: form.nom, categorie: form.categorie, quantite: Number(form.quantite) || 0, seuil_alerte: Number(form.seuil_alerte) || 0, notes: form.notes || null })
+      .then(function(rows) {
+        setData(data.concat(rows[0]).sort(function(a,b){ return a.categorie.localeCompare(b.categorie) || a.nom.localeCompare(b.nom); }));
+        setAddModal(false); setForm(EMPTY); setSaving(false);
+      }).catch(function(e) { alert(e.message); setSaving(false); });
+  }
+
+  function handleDelta(item, delta) {
+    var newQty = Math.max(0, (Number(item.quantite) || 0) + delta);
+    setUpdating(item.id);
+    sbUpdate("equipements", item.id, { quantite: newQty })
+      .then(function() {
+        setData(data.map(function(d) { return d.id === item.id ? Object.assign({}, d, { quantite: newQty }) : d; }));
+        setUpdating(null);
+      }).catch(function(e) { alert(e.message); setUpdating(null); });
+  }
+
+  function handleDelete(id) {
+    if (!window.confirm("Supprimer cet article ?")) return;
+    fetch(SUPABASE_URL + "/rest/v1/equipements?id=eq." + id, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } })
+      .then(function() { setData(data.filter(function(d) { return d.id !== id; })); });
+  }
+
+  function handleSaveEdit() {
+    setSaving(true);
+    sbUpdate("equipements", editItem.id, { nom: editItem.nom, categorie: editItem.categorie, seuil_alerte: Number(editItem.seuil_alerte) || 0, notes: editItem.notes || null })
+      .then(function() {
+        setData(data.map(function(d) { return d.id === editItem.id ? Object.assign({}, d, editItem) : d; }));
+        setEditItem(null); setSaving(false);
+      }).catch(function(e) { alert(e.message); setSaving(false); });
+  }
+
+  function getCat(id) { return CATEGORIES_EQUIPEMENT.find(function(c) { return c.id === id; }) || CATEGORIES_EQUIPEMENT[5]; }
+
+  // Stats dashboard
+  var totalArticles = data.length;
+  var totalUnites = data.reduce(function(s, d) { return s + (Number(d.quantite) || 0); }, 0);
+  var enAlerte = data.filter(function(d) { return Number(d.seuil_alerte) > 0 && Number(d.quantite) <= Number(d.seuil_alerte); }).length;
+  var epuises = data.filter(function(d) { return Number(d.quantite) === 0; }).length;
+
+  // Grouper par catégorie
+  var grouped = CATEGORIES_EQUIPEMENT.map(function(cat) {
+    return { cat: cat, items: data.filter(function(d) { return d.categorie === cat.id; }) };
+  }).filter(function(g) { return g.items.length > 0; });
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+      {/* ── MINI DASHBOARD ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Articles référencés</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#1a1a1a", lineHeight: 1 }}>{totalArticles}</div>
+        </div>
+        <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Unités en stock</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: "#1D9E75", lineHeight: 1 }}>{totalUnites}</div>
+        </div>
+        <div onClick={function() {}} style={{ background: enAlerte > 0 ? "#BA751708" : "#fff", border: "1px solid " + (enAlerte > 0 ? "#BA751744" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>⚠️ En alerte</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: enAlerte > 0 ? "#BA7517" : "#aaa", lineHeight: 1 }}>{enAlerte}</div>
+          {enAlerte > 0 && <div style={{ fontSize: 11, color: "#BA7517", marginTop: 4 }}>stock ≤ seuil</div>}
+        </div>
+        <div style={{ background: epuises > 0 ? "#C8102E08" : "#fff", border: "1px solid " + (epuises > 0 ? "#C8102E44" : "#e0e0e0"), borderRadius: 12, padding: "16px 18px" }}>
+          <div style={{ fontSize: 11, color: "#888", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>🚫 Épuisés</div>
+          <div style={{ fontSize: 32, fontWeight: 800, color: epuises > 0 ? "#C8102E" : "#aaa", lineHeight: 1 }}>{epuises}</div>
+          {epuises > 0 && <div style={{ fontSize: 11, color: "#C8102E", marginTop: 4 }}>à réapprovisionner</div>}
+        </div>
+      </div>
+
+      {/* Barre par catégorie */}
+      {data.length > 0 && (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {CATEGORIES_EQUIPEMENT.map(function(cat) {
+            var items = data.filter(function(d) { return d.categorie === cat.id; });
+            if (!items.length) return null;
+            var total = items.reduce(function(s,d){ return s + (Number(d.quantite)||0); }, 0);
+            var alert = items.some(function(d){ return Number(d.seuil_alerte) > 0 && Number(d.quantite) <= Number(d.seuil_alerte); });
+            return (
+              <div key={cat.id} style={{ display: "flex", alignItems: "center", gap: 6, background: cat.color + "11", border: "1px solid " + cat.color + "33", borderRadius: 20, padding: "4px 12px" }}>
+                <span style={{ fontSize: 14 }}>{cat.icon}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: cat.color }}>{cat.label}</span>
+                <span style={{ fontSize: 12, color: cat.color, fontWeight: 700 }}>{total}</span>
+                {alert && <span style={{ fontSize: 10 }}>⚠️</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bouton ajouter */}
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <button onClick={function() { setAddModal(true); }} style={btnA}>+ Ajouter un article</button>
+      </div>
+
+      {/* Liste groupée par catégorie */}
+      {data.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 0", color: "#aaa", fontSize: 14 }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+          Aucun article — cliquez "+ Ajouter un article" pour commencer
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {grouped.map(function(g) {
+            var cat = g.cat;
+            return (
+              <div key={cat.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 14, overflow: "hidden" }}>
+                {/* En-tête catégorie */}
+                <div style={{ padding: "12px 18px", background: cat.color + "11", borderBottom: "1px solid " + cat.color + "22", display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>{cat.icon}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: cat.color }}>{cat.label}</span>
+                  <span style={{ fontSize: 12, color: cat.color, background: cat.color + "22", borderRadius: 20, padding: "1px 8px", fontWeight: 600, marginLeft: 4 }}>
+                    {g.items.length} article{g.items.length > 1 ? "s" : ""} · {g.items.reduce(function(s,d){return s+(Number(d.quantite)||0);},0)} unités
+                  </span>
+                </div>
+                {/* Lignes */}
+                <div>
+                  {g.items.map(function(item, idx) {
+                    var qty = Number(item.quantite) || 0;
+                    var seuil = Number(item.seuil_alerte) || 0;
+                    var isLow = seuil > 0 && qty <= seuil;
+                    var isEmpty = qty === 0;
+                    var isUpdating = updating === item.id;
+                    return (
+                      <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 18px", borderBottom: idx < g.items.length - 1 ? "1px solid #f4f4f4" : "none", background: isEmpty ? "#C8102E04" : isLow ? "#BA751704" : "transparent" }}>
+                        {/* Nom + notes */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a", display: "flex", alignItems: "center", gap: 8 }}>
+                            {item.nom}
+                            {isEmpty && <span style={{ fontSize: 10, fontWeight: 700, color: "#C8102E", background: "#C8102E11", padding: "1px 7px", borderRadius: 10 }}>ÉPUISÉ</span>}
+                            {!isEmpty && isLow && <span style={{ fontSize: 10, fontWeight: 700, color: "#BA7517", background: "#BA751711", padding: "1px 7px", borderRadius: 10 }}>ALERTE</span>}
+                          </div>
+                          {item.notes && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{item.notes}</div>}
+                          {seuil > 0 && <div style={{ fontSize: 11, color: "#ccc", marginTop: 1 }}>Seuil d'alerte : {seuil}</div>}
+                        </div>
+
+                        {/* Contrôle quantité */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 0, background: "#f4f4f4", borderRadius: 10, overflow: "hidden", flexShrink: 0 }}>
+                          <button onClick={function() { handleDelta(item, -1); }} disabled={qty === 0 || isUpdating} style={{ width: 36, height: 36, border: "none", background: "transparent", cursor: qty > 0 ? "pointer" : "not-allowed", fontSize: 18, fontWeight: 700, color: qty > 0 ? "#C8102E" : "#ccc", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                          <div style={{ minWidth: 52, textAlign: "center", fontSize: 18, fontWeight: 800, color: isEmpty ? "#C8102E" : isLow ? "#BA7517" : "#1a1a1a", padding: "0 4px" }}>
+                            {isUpdating ? "…" : qty}
+                          </div>
+                          <button onClick={function() { handleDelta(item, +1); }} disabled={isUpdating} style={{ width: 36, height: 36, border: "none", background: "transparent", cursor: "pointer", fontSize: 18, fontWeight: 700, color: "#1D9E75", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button onClick={function() { setEditItem(Object.assign({}, item)); }} style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#444" }}>✏️</button>
+                          <button onClick={function() { handleDelete(item.id); }} style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #fdd", background: "#fff", cursor: "pointer", fontSize: 12, color: "#E24B4A" }}>🗑️</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* MODAL AJOUTER */}
+      <Modal open={addModal} onClose={function() { setAddModal(false); setForm(EMPTY); }} title="Ajouter un article">
+        <Field label="Nom *"><input style={inp} value={form.nom} onChange={function(e) { setForm(Object.assign({}, form, { nom: e.target.value })); }} placeholder="Ex: Ballon taille 4" /></Field>
+        <Field label="Catégorie">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {CATEGORIES_EQUIPEMENT.map(function(cat) {
+              var active = form.categorie === cat.id;
+              return <button key={cat.id} onClick={function() { setForm(Object.assign({}, form, { categorie: cat.id })); }} style={{ padding: "8px 6px", borderRadius: 8, border: "2px solid " + (active ? cat.color : "#e0e0e0"), background: active ? cat.color + "11" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: active ? 700 : 400, color: active ? cat.color : "#555", textAlign: "center" }}>{cat.icon}<br />{cat.label}</button>;
+            })}
+          </div>
+        </Field>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <Field label="Quantité initiale"><input type="number" min="0" style={inp} value={form.quantite} onChange={function(e) { setForm(Object.assign({}, form, { quantite: e.target.value })); }} /></Field>
+          <Field label="Seuil d'alerte"><input type="number" min="0" style={inp} value={form.seuil_alerte} onChange={function(e) { setForm(Object.assign({}, form, { seuil_alerte: e.target.value })); }} placeholder="0 = désactivé" /></Field>
+        </div>
+        <Field label="Notes"><input style={inp} value={form.notes} onChange={function(e) { setForm(Object.assign({}, form, { notes: e.target.value })); }} placeholder="Ex: Pour les entraînements" /></Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setAddModal(false); setForm(EMPTY); }} style={btnS}>Annuler</button>
+          <button onClick={handleAdd} disabled={!form.nom || saving} style={Object.assign({}, btnP, { opacity: form.nom ? 1 : 0.5 })}>{saving ? "Enregistrement…" : "Ajouter"}</button>
+        </div>
+      </Modal>
+
+      {/* MODAL MODIFIER */}
+      {editItem && <Modal open={!!editItem} onClose={function() { setEditItem(null); }} title={"Modifier — " + editItem.nom}>
+        <Field label="Nom *"><input style={inp} value={editItem.nom} onChange={function(e) { setEditItem(Object.assign({}, editItem, { nom: e.target.value })); }} /></Field>
+        <Field label="Catégorie">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {CATEGORIES_EQUIPEMENT.map(function(cat) {
+              var active = editItem.categorie === cat.id;
+              return <button key={cat.id} onClick={function() { setEditItem(Object.assign({}, editItem, { categorie: cat.id })); }} style={{ padding: "8px 6px", borderRadius: 8, border: "2px solid " + (active ? cat.color : "#e0e0e0"), background: active ? cat.color + "11" : "#fff", cursor: "pointer", fontSize: 12, fontWeight: active ? 700 : 400, color: active ? cat.color : "#555", textAlign: "center" }}>{cat.icon}<br />{cat.label}</button>;
+            })}
+          </div>
+        </Field>
+        <Field label="Seuil d'alerte"><input type="number" min="0" style={inp} value={editItem.seuil_alerte || 0} onChange={function(e) { setEditItem(Object.assign({}, editItem, { seuil_alerte: e.target.value })); }} placeholder="0 = désactivé" /></Field>
+        <Field label="Notes"><input style={inp} value={editItem.notes || ""} onChange={function(e) { setEditItem(Object.assign({}, editItem, { notes: e.target.value })); }} /></Field>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+          <button onClick={function() { setEditItem(null); }} style={btnS}>Annuler</button>
+          <button onClick={handleSaveEdit} disabled={saving} style={Object.assign({}, btnP, { opacity: saving ? 0.6 : 1 })}>{saving ? "Enregistrement…" : "Enregistrer"}</button>
+        </div>
+      </Modal>}
+    </div>
+  );
+}
+
 var TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "partenaires", label: "Partenaires" },
   { id: "evenements", label: "Événements" },
   { id: "coaches", label: "Coaches" },
+  { id: "equipement", label: "Équipement" },
 ];
 
 export default function App() {
@@ -3775,6 +4029,7 @@ export default function App() {
         {tab === "partenaires" && <Partenaires />}
         {tab === "evenements" && <Evenements />}
         {tab === "coaches" && <Coaches />}
+        {tab === "equipement" && <Equipement />}
       </div>
       {adminOpen && <AdminPanel currentUser={currentUser} onClose={function() { setAdminOpen(false); }} />}
       {changePassOpen && <ChangerMotDePasse currentUser={currentUser} onClose={function() { setChangePassOpen(false); }} />}
