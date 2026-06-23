@@ -4163,14 +4163,17 @@ function EmailsApp() {
   // Gestionnaire de signatures
   var SIG_KEY = "rcn_signatures";
   var SIG_ACTIVE_KEY = "rcn_signature_active";
-  function loadSigs() {
-    try { return JSON.parse(localStorage.getItem(SIG_KEY)) || [{ id: 1, nom: "Par défaut", texte: "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com", logo: null }]; } catch(e) { return [{ id: 1, nom: "Par défaut", texte: "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com", logo: null }]; }
-  }
-  function loadActiveSigId() {
-    try { return parseInt(localStorage.getItem(SIG_ACTIVE_KEY)) || 1; } catch(e) { return 1; }
-  }
-  var sigsState = useState(loadSigs); var sigs = sigsState[0]; var setSigs = sigsState[1];
-  var activeSigIdState = useState(loadActiveSigId); var activeSigId = activeSigIdState[0]; var setActiveSigId = activeSigIdState[1];
+  var DEFAULT_SIGS = [{ id: 1, nom: "Par défaut", texte: "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com", logo: null }];
+  var sigsState = useState(DEFAULT_SIGS); var sigs = sigsState[0]; var setSigs = sigsState[1];
+  var activeSigIdState = useState(1); var activeSigId = activeSigIdState[0]; var setActiveSigId = activeSigIdState[1];
+  useEffect(function() {
+    try {
+      var saved = localStorage.getItem(SIG_KEY);
+      if (saved) setSigs(JSON.parse(saved));
+      var savedId = localStorage.getItem(SIG_ACTIVE_KEY);
+      if (savedId) setActiveSigId(parseInt(savedId));
+    } catch(e) {}
+  }, []);
   var editingSigState = useState(null); var editingSig = editingSigState[0]; var setEditingSig = editingSigState[1];
   var newSigState = useState(false); var newSig = newSigState[0]; var setNewSig = newSigState[1];
   var newSigFormState = useState({ nom: "", texte: "", logo: null }); var newSigForm = newSigFormState[0]; var setNewSigForm = newSigFormState[1];
