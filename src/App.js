@@ -4112,12 +4112,215 @@ function Equipement() {
   );
 }
 
+// ── EMAILS APP ────────────────────────────────────────────────
+function EmailsApp() {
+  var emailsState = useState([]); var emails = emailsState[0]; var setEmails = emailsState[1];
+  var partenairesState = useState([]); var partenaires = partenairesState[0]; var setPartenaires = partenairesState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var syncingState = useState(false); var syncing = syncingState[0]; var setSyncing = syncingState[1];
+  var selectedState = useState(null); var selected = selectedState[0]; var setSelected = selectedState[1];
+  var filterState = useState("tous"); var filter = filterState[0]; var setFilter = filterState[1];
+  var filterPartState = useState(""); var filterPart = filterPartState[0]; var setFilterPart = filterPartState[1];
+  var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
+  var composeState = useState(false); var compose = composeState[0]; var setCompose = composeState[1];
+  var sendingState = useState(false); var sending = sendingState[0]; var setSending = sendingState[1];
+  var toState = useState(""); var to = toState[0]; var setTo = toState[1];
+  var subjectState = useState(""); var subject = subjectState[0]; var setSubject = subjectState[1];
+  var bodyState = useState(""); var body = bodyState[0]; var setBody = bodyState[1];
+  var replyToState = useState(null); var replyTo = replyToState[0]; var setReplyTo = replyToState[1];
+  var signature = "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com";
+
+  useEffect(function() {
+    Promise.all([
+      sbFetch("emails", { select: "*", order: "date_reception.desc" }),
+      sbFetch("partenaires", { select: "id,nom,contact_email,type", order: "nom.asc" }),
+    ]).then(function(r) {
+      setEmails(r[0]); setPartenaires(r[1]); setLoading(false);
+    }).catch(function() { setLoading(false); });
+  }, []);
+
+  function handleSync() {
+    setSyncing(true);
+    fetch("/api/gmail-sync", { method: "POST" })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        return sbFetch("emails", { select: "*", order: "date_reception.desc" });
+      })
+      .then(function(rows) { setEmails(rows); setSyncing(false); })
+      .catch(function(e) { alert("Erreur : " + e.message); setSyncing(false); });
+  }
+
+  function handleSend() {
+    if (!to || !subject || !body) { alert("Destinataire, sujet et corps requis."); return; }
+    setSending(true);
+    var partId = partenaires.find(function(p) { return p.contact_email && p.contact_email.toLowerCase() === to.toLowerCase(); });
+    fetch("/api/gmail-send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: to, subject: subject, body: body + signature,
+        threadId: replyTo ? replyTo.thread_id : null,
+        replyToMessageId: replyTo ? replyTo.gmail_id : null,
+        partenaireId: partId ? partId.id : null,
+      }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) throw new Error(d.error);
+        setSending(false); setCompose(false); setReplyTo(null);
+        setTo(""); setSubject(""); setBody("");
+        return sbFetch("emails", { select: "*", order: "date_reception.desc" });
+      })
+      .then(function(rows) { setEmails(rows); })
+      .catch(function(e) { alert("Erreur envoi : " + e.message); setSending(false); });
+  }
+
+  function handleMarkRead(id) {
+    sbUpdate("emails", id, { lu: true }).then(function() {
+      setEmails(emails.map(function(e) { return e.id === id ? Object.assign({}, e, { lu: true }) : e; }));
+    });
+  }
+
+  function openReply(email) {
+    setReplyTo(email);
+    setTo(email.de.match(/<(.+?)>/) ? email.de.match(/<(.+?)>/)[1] : email.de);
+    setSubject(email.sujet.startsWith("Re:") ? email.sujet : "Re: " + email.sujet);
+    setBody(""); setCompose(true);
+  }
+
+  function getPartenaire(id) { return id ? partenaires.find(function(p) { return p.id === id; }) : null; }
+
+  // Filtrage
+  var filtered = emails.filter(function(e) {
+    if (filter === "recus" && e.type !== "recu") return false;
+    if (filter === "envoyes" && e.type !== "envoye") return false;
+    if (filter === "nonlus" && (e.lu || e.type !== "recu")) return false;
+    if (filterPart && e.partenaire_id !== filterPart) return false;
+    if (search) {
+      var q = search.toLowerCase();
+      if (!(e.sujet||"").toLowerCase().includes(q) && !(e.de||"").toLowerCase().includes(q) && !(e.corps||"").toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  var nonLus = emails.filter(function(e) { return !e.lu && e.type === "recu"; }).length;
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div style={{ display: "flex", gap: 0, height: "calc(100vh - 120px)", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 14, overflow: "hidden" }}>
+
+      {/* ── COLONNE GAUCHE : liste emails ── */}
+      <div style={{ width: 340, borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column", flexShrink: 0 }}>
+        {/* Header */}
+        <div style={{ padding: "14px 16px", borderBottom: "1px solid #e0e0e0", background: "#1a1a1a" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>📧 Emails</span>
+              {nonLus > 0 && <span style={{ background: "#C8102E", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{nonLus}</span>}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={handleSync} disabled={syncing} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: syncing ? "#444" : "#333", color: "#fff", cursor: "pointer", fontSize: 12 }}>{syncing ? "⟳..." : "⟳"}</button>
+              <button onClick={function() { setCompose(true); setReplyTo(null); setTo(""); setSubject(""); setBody(""); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>✉️ Nouveau</button>
+            </div>
+          </div>
+          {/* Recherche */}
+          <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher..." style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "none", background: "#333", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        {/* Filtres */}
+        <div style={{ padding: "8px 12px", borderBottom: "1px solid #e0e0e0", display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[["tous","Tous"],["recus","↙ Reçus"],["envoyes","↗ Envoyés"],["nonlus","Non lus"]].map(function(f) {
+            return <button key={f[0]} onClick={function() { setFilter(f[0]); }} style={{ padding: "3px 10px", borderRadius: 20, border: "1px solid " + (filter === f[0] ? "#C8102E" : "#e0e0e0"), background: filter === f[0] ? "#C8102E" : "#fff", color: filter === f[0] ? "#fff" : "#555", cursor: "pointer", fontSize: 11, fontWeight: filter === f[0] ? 600 : 400 }}>{f[1]}</button>;
+          })}
+        </div>
+        {/* Filtre partenaire */}
+        <div style={{ padding: "6px 12px", borderBottom: "1px solid #e0e0e0" }}>
+          <select style={Object.assign({}, sel, { fontSize: 12 })} value={filterPart} onChange={function(e) { setFilterPart(e.target.value); }}>
+            <option value="">Tous les partenaires</option>
+            {partenaires.filter(function(p) { return emails.some(function(e) { return e.partenaire_id === p.id; }); }).map(function(p) {
+              return <option key={p.id} value={p.id}>{p.nom}</option>;
+            })}
+          </select>
+        </div>
+        {/* Liste */}
+        <div style={{ flex: 1, overflowY: "auto" }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: 20, textAlign: "center", color: "#aaa", fontSize: 13 }}>Aucun email</div>
+          ) : filtered.map(function(email) {
+            var isSelected = selected && selected.id === email.id;
+            var part = getPartenaire(email.partenaire_id);
+            var dateStr = email.date_reception ? new Date(email.date_reception).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+            return (
+              <div key={email.id} onClick={function() { setSelected(email); setCompose(false); if (!email.lu) handleMarkRead(email.id); }} style={{ padding: "12px 14px", borderBottom: "1px solid #f4f4f4", cursor: "pointer", background: isSelected ? "#C8102E08" : email.lu ? "#fff" : "#fff8f8", borderLeft: "3px solid " + (isSelected ? "#C8102E" : email.lu ? "transparent" : "#C8102E") }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 12, fontWeight: !email.lu && email.type === "recu" ? 700 : 500, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>{email.type === "recu" ? (email.de.match(/<(.+?)>/) ? email.de.split("<")[0].trim() : email.de) : "À : " + email.a}</span>
+                  <span style={{ fontSize: 10, color: "#aaa", flexShrink: 0 }}>{dateStr}</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: !email.lu && email.type === "recu" ? 700 : 400, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email.sujet || "(sans objet)"}</div>
+                <div style={{ fontSize: 11, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{(email.corps || "").substring(0, 60)}</div>
+                {part && <span style={{ fontSize: 10, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 600 }}>{part.nom}</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── COLONNE DROITE : contenu email / composition ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {compose ? (
+          /* Composition */
+          <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{replyTo ? "↩ Répondre" : "✉️ Nouveau message"}</div>
+            <Field label="À"><input style={inp} value={to} onChange={function(e) { setTo(e.target.value); }} placeholder="destinataire@email.com" /></Field>
+            <Field label="Sujet"><input style={inp} value={subject} onChange={function(e) { setSubject(e.target.value); }} /></Field>
+            <Field label="Message">
+              <textarea style={Object.assign({}, inp, { minHeight: 200, resize: "vertical", fontFamily: "system-ui" })} value={body} onChange={function(e) { setBody(e.target.value); }} placeholder="Votre message..." />
+            </Field>
+            <div style={{ background: "#f4f4f4", padding: "8px 12px", borderRadius: 8, fontSize: 12, color: "#888", fontFamily: "monospace" }}>{signature}</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={function() { setCompose(false); setReplyTo(null); }} style={btnS}>Annuler</button>
+              <button onClick={handleSend} disabled={sending} style={Object.assign({}, btnP, { opacity: sending ? 0.6 : 1 })}>{sending ? "Envoi..." : "📤 Envoyer"}</button>
+            </div>
+          </div>
+        ) : selected ? (
+          /* Lecture email */
+          <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+            <div style={{ marginBottom: 20 }}>
+              <h2 style={{ margin: "0 0 12px", fontSize: 20, fontWeight: 700, color: "#1a1a1a" }}>{selected.sujet || "(sans objet)"}</h2>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: "#444" }}><strong>De :</strong> {selected.de}</div>
+                  <div style={{ fontSize: 13, color: "#444" }}><strong>À :</strong> {selected.a}</div>
+                  <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{selected.date_reception ? new Date(selected.date_reception).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</div>
+                  {getPartenaire(selected.partenaire_id) && <div style={{ marginTop: 6 }}><span style={{ fontSize: 11, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "2px 8px", fontWeight: 600 }}>🏢 {getPartenaire(selected.partenaire_id).nom}</span></div>}
+                </div>
+                {selected.type === "recu" && <button onClick={function() { openReply(selected); }} style={Object.assign({}, btnA, { fontSize: 13 })}>↩ Répondre</button>}
+              </div>
+            </div>
+            <div style={{ borderTop: "1px solid #e0e0e0", paddingTop: 20 }}>
+              <div style={{ fontSize: 14, color: "#333", lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "system-ui" }}>{selected.corps || "(corps vide)"}</div>
+            </div>
+          </div>
+        ) : (
+          /* Placeholder */
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 12, color: "#ccc" }}>
+            <span style={{ fontSize: 48 }}>📧</span>
+            <span style={{ fontSize: 14 }}>Sélectionnez un email pour le lire</span>
+            <button onClick={function() { setCompose(true); }} style={Object.assign({}, btnA, { fontSize: 13 })}>✉️ Nouveau message</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 var TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "partenaires", label: "Partenaires" },
   { id: "evenements", label: "Événements" },
   { id: "coaches", label: "Coaches" },
   { id: "equipement", label: "Équipement" },
+  { id: "emails", label: "Emails" },
 ];
 
 export default function App() {
@@ -4195,6 +4398,7 @@ export default function App() {
         {tab === "evenements" && <Evenements />}
         {tab === "coaches" && <Coaches />}
         {tab === "equipement" && <Equipement />}
+        {tab === "emails" && <EmailsApp />}
       </div>
       {adminOpen && <AdminPanel currentUser={currentUser} onClose={function() { setAdminOpen(false); }} />}
       {changePassOpen && <ChangerMotDePasse currentUser={currentUser} onClose={function() { setChangePassOpen(false); }} />}
