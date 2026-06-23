@@ -4146,11 +4146,13 @@ function Equipement() {
 function EmailsApp() {
   var emailsState = useState([]); var emails = emailsState[0]; var setEmails = emailsState[1];
   var partenairesState = useState([]); var partenaires = partenairesState[0]; var setPartenaires = partenairesState[1];
+  var dossiersState = useState([]); var dossiers = dossiersState[0]; var setDossiers = dossiersState[1];
   var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
   var syncingState = useState(false); var syncing = syncingState[0]; var setSyncing = syncingState[1];
   var selectedState = useState(null); var selected = selectedState[0]; var setSelected = selectedState[1];
   var filterState = useState("tous"); var filter = filterState[0]; var setFilter = filterState[1];
   var filterPartState = useState(""); var filterPart = filterPartState[0]; var setFilterPart = filterPartState[1];
+  var filterDossierState = useState(""); var filterDossier = filterDossierState[0]; var setFilterDossier = filterDossierState[1];
   var searchState = useState(""); var search = searchState[0]; var setSearch = searchState[1];
   var composeState = useState(false); var compose = composeState[0]; var setCompose = composeState[1];
   var sendingState = useState(false); var sending = sendingState[0]; var setSending = sendingState[1];
@@ -4159,6 +4161,14 @@ function EmailsApp() {
   var bodyState = useState(""); var body = bodyState[0]; var setBody = bodyState[1];
   var replyToState = useState(null); var replyTo = replyToState[0]; var setReplyTo = replyToState[1];
   var settingsState = useState(false); var settings = settingsState[0]; var setSettings = settingsState[1];
+  var dossierMgrState = useState(false); var dossierMgr = dossierMgrState[0]; var setDossierMgr = dossierMgrState[1];
+  var newDossierState = useState(false); var newDossier = newDossierState[0]; var setNewDossier = newDossierState[1];
+  var newDossierFormState = useState({ nom: "", couleur: "#C8102E", icone: "📁" }); var newDossierForm = newDossierFormState[0]; var setNewDossierForm = newDossierFormState[1];
+  var editDossierState = useState(null); var editDossier = editDossierState[0]; var setEditDossier = editDossierState[1];
+  var movingEmailState = useState(null); var movingEmail = movingEmailState[0]; var setMovingEmail = movingEmailState[1];
+
+  var ICONES = ["📁","📂","💼","📊","💰","🏆","📝","🤝","🏠","🏫","📧","⭐","🔴","🟡","🟢"];
+  var COULEURS = ["#C8102E","#BA7517","#1D9E75","#185FA5","#534AB7","#888","#1a1a1a","#E24B4A"];
 
   // Gestionnaire de signatures
   var SIG_KEY = "rcn_signatures";
@@ -4194,10 +4204,40 @@ function EmailsApp() {
     Promise.all([
       sbFetch("emails", { select: "*", order: "date_reception.desc" }),
       sbFetch("partenaires", { select: "id,nom,contact_email,type", order: "nom.asc" }),
+      sbFetch("email_dossiers", { select: "*", order: "nom.asc" }),
     ]).then(function(r) {
-      setEmails(r[0]); setPartenaires(r[1]); setLoading(false);
+      setEmails(r[0]); setPartenaires(r[1]); setDossiers(r[2]); setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
+
+  function handleAddDossier() {
+    if (!newDossierForm.nom) return;
+    sbInsert("email_dossiers", newDossierForm).then(function(rows) {
+      setDossiers(dossiers.concat(rows[0]));
+      setNewDossier(false); setNewDossierForm({ nom: "", couleur: "#C8102E", icone: "📁" });
+    }).catch(function(e) { alert(e.message); });
+  }
+
+  function handleDeleteDossier(id) {
+    if (!window.confirm("Supprimer ce dossier ? Les emails seront déplacés dans la boîte principale.")) return;
+    fetch(SUPABASE_URL + "/rest/v1/email_dossiers?id=eq." + id, { method: "DELETE", headers: { "apikey": SUPABASE_KEY, "Authorization": "Bearer " + SUPABASE_KEY } })
+      .then(function() { setDossiers(dossiers.filter(function(d) { return d.id !== id; })); });
+  }
+
+  function handleSaveEditDossier() {
+    sbUpdate("email_dossiers", editDossier.id, { nom: editDossier.nom, couleur: editDossier.couleur, icone: editDossier.icone })
+      .then(function() {
+        setDossiers(dossiers.map(function(d) { return d.id === editDossier.id ? Object.assign({}, d, editDossier) : d; }));
+        setEditDossier(null);
+      }).catch(function(e) { alert(e.message); });
+  }
+
+  function handleMoveEmail(emailId, dossierId) {
+    sbUpdate("emails", emailId, { dossier_id: dossierId || null }).then(function() {
+      setEmails(emails.map(function(e) { return e.id === emailId ? Object.assign({}, e, { dossier_id: dossierId || null }) : e; }));
+      setMovingEmail(null);
+    });
+  }
 
   function handleSync() {
     setSyncing(true);
@@ -4256,6 +4296,8 @@ function EmailsApp() {
     if (filter === "envoyes" && e.type !== "envoye") return false;
     if (filter === "nonlus" && (e.lu || e.type !== "recu")) return false;
     if (filterPart && e.partenaire_id !== filterPart) return false;
+    if (filterDossier === "__none__" && e.dossier_id) return false;
+    if (filterDossier && filterDossier !== "__none__" && e.dossier_id !== filterDossier) return false;
     if (search) {
       var q = search.toLowerCase();
       if (!(e.sujet||"").toLowerCase().includes(q) && !(e.de||"").toLowerCase().includes(q) && !(e.corps||"").toLowerCase().includes(q)) return false;
@@ -4398,6 +4440,93 @@ function EmailsApp() {
             })}
           </select>
         </div>
+
+        {/* Dossiers */}
+        <div style={{ padding: "8px 12px", borderBottom: "1px solid #e0e0e0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#888", textTransform: "uppercase", letterSpacing: 1 }}>Dossiers</span>
+            <button onClick={function() { setDossierMgr(!dossierMgr); }} style={{ padding: "2px 6px", borderRadius: 5, border: "none", background: dossierMgr ? "#C8102E" : "#333", color: "#fff", cursor: "pointer", fontSize: 10 }}>⚙️</button>
+          </div>
+          {/* Liste dossiers filtrables */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            <div onClick={function() { setFilterDossier(""); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, cursor: "pointer", background: !filterDossier ? "#C8102E11" : "transparent", fontWeight: !filterDossier ? 700 : 400 }}>
+              <span style={{ fontSize: 13 }}>📬</span>
+              <span style={{ fontSize: 12, color: !filterDossier ? "#C8102E" : "#555", flex: 1 }}>Tous les emails</span>
+              <span style={{ fontSize: 10, color: "#aaa" }}>{emails.length}</span>
+            </div>
+            <div onClick={function() { setFilterDossier("__none__"); }} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, cursor: "pointer", background: filterDossier === "__none__" ? "#C8102E11" : "transparent" }}>
+              <span style={{ fontSize: 13 }}>📥</span>
+              <span style={{ fontSize: 12, color: filterDossier === "__none__" ? "#C8102E" : "#555", flex: 1 }}>Non classés</span>
+              <span style={{ fontSize: 10, color: "#aaa" }}>{emails.filter(function(e) { return !e.dossier_id; }).length}</span>
+            </div>
+            {dossiers.map(function(d) {
+              var count = emails.filter(function(e) { return e.dossier_id === d.id; }).length;
+              var active = filterDossier === d.id;
+              return (
+                <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 8px", borderRadius: 6, cursor: "pointer", background: active ? d.couleur + "22" : "transparent" }} onClick={function() { setFilterDossier(active ? "" : d.id); }}>
+                  <span style={{ fontSize: 13 }}>{d.icone}</span>
+                  <span style={{ fontSize: 12, color: active ? d.couleur : "#555", flex: 1, fontWeight: active ? 700 : 400 }}>{d.nom}</span>
+                  <span style={{ fontSize: 10, color: "#aaa" }}>{count}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Gestionnaire dossiers */}
+          {dossierMgr && (
+            <div style={{ marginTop: 8, padding: "10px", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Gérer les dossiers</div>
+              {dossiers.map(function(d) {
+                var isEditing = editDossier && editDossier.id === d.id;
+                return (
+                  <div key={d.id} style={{ marginBottom: 6 }}>
+                    {isEditing ? (
+                      <div style={{ background: "#f4f4f4", borderRadius: 6, padding: 8 }}>
+                        <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                          <input style={Object.assign({}, inp, { fontSize: 12, flex: 1 })} value={editDossier.nom} onChange={function(e) { setEditDossier(Object.assign({}, editDossier, { nom: e.target.value })); }} />
+                        </div>
+                        <div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" }}>
+                          {ICONES.map(function(ic) { return <span key={ic} onClick={function() { setEditDossier(Object.assign({}, editDossier, { icone: ic })); }} style={{ fontSize: 16, cursor: "pointer", opacity: editDossier.icone === ic ? 1 : 0.4, padding: 2 }}>{ic}</span>; })}
+                        </div>
+                        <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                          {COULEURS.map(function(c) { return <div key={c} onClick={function() { setEditDossier(Object.assign({}, editDossier, { couleur: c })); }} style={{ width: 18, height: 18, borderRadius: "50%", background: c, cursor: "pointer", border: editDossier.couleur === c ? "2px solid #000" : "2px solid transparent" }} />; })}
+                        </div>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={function() { setEditDossier(null); }} style={Object.assign({}, btnS, { fontSize: 11, flex: 1 })}>Annuler</button>
+                          <button onClick={handleSaveEditDossier} style={Object.assign({}, btnP, { fontSize: 11, flex: 1 })}>Sauver</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 6px", borderRadius: 6, background: "#f4f4f4" }}>
+                        <span style={{ color: d.couleur }}>{d.icone}</span>
+                        <span style={{ fontSize: 11, flex: 1, color: "#333" }}>{d.nom}</span>
+                        <button onClick={function() { setEditDossier(Object.assign({}, d)); }} style={{ padding: "1px 5px", borderRadius: 4, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 10 }}>✏️</button>
+                        <button onClick={function() { handleDeleteDossier(d.id); }} style={{ padding: "1px 5px", borderRadius: 4, border: "1px solid #fdd", background: "#fff", cursor: "pointer", fontSize: 10, color: "#E24B4A" }}>🗑️</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {newDossier ? (
+                <div style={{ background: "#f4f4f4", borderRadius: 6, padding: 8, marginTop: 6 }}>
+                  <input style={Object.assign({}, inp, { fontSize: 12, marginBottom: 6 })} value={newDossierForm.nom} placeholder="Nom du dossier" onChange={function(e) { setNewDossierForm(Object.assign({}, newDossierForm, { nom: e.target.value })); }} />
+                  <div style={{ display: "flex", gap: 4, marginBottom: 6, flexWrap: "wrap" }}>
+                    {ICONES.map(function(ic) { return <span key={ic} onClick={function() { setNewDossierForm(Object.assign({}, newDossierForm, { icone: ic })); }} style={{ fontSize: 16, cursor: "pointer", opacity: newDossierForm.icone === ic ? 1 : 0.4, padding: 2 }}>{ic}</span>; })}
+                  </div>
+                  <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                    {COULEURS.map(function(c) { return <div key={c} onClick={function() { setNewDossierForm(Object.assign({}, newDossierForm, { couleur: c })); }} style={{ width: 18, height: 18, borderRadius: "50%", background: c, cursor: "pointer", border: newDossierForm.couleur === c ? "2px solid #000" : "2px solid transparent" }} />; })}
+                  </div>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button onClick={function() { setNewDossier(false); }} style={Object.assign({}, btnS, { fontSize: 11, flex: 1 })}>Annuler</button>
+                    <button onClick={handleAddDossier} disabled={!newDossierForm.nom} style={Object.assign({}, btnP, { fontSize: 11, flex: 1, opacity: newDossierForm.nom ? 1 : 0.5 })}>Créer</button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={function() { setNewDossier(true); }} style={{ width: "100%", marginTop: 6, padding: "5px", borderRadius: 6, border: "1px dashed #C8102E", background: "transparent", color: "#C8102E", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>+ Nouveau dossier</button>
+              )}
+            </div>
+          )}
+        </div>
         {/* Liste */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {filtered.length === 0 ? (
@@ -4417,6 +4546,7 @@ function EmailsApp() {
                 {part && <span style={{ fontSize: 10, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 600 }}>{part.nom}</span>}
                 {email.importance === "urgent" && <span style={{ fontSize: 10, background: "#C8102E", color: "#fff", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 700, marginLeft: 4 }}>🔴 Urgent</span>}
                 {email.importance === "important" && <span style={{ fontSize: 10, background: "#BA7517", color: "#fff", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 700, marginLeft: 4 }}>🟡 Important</span>}
+                {email.dossier_id && (function() { var d = dossiers.find(function(x) { return x.id === email.dossier_id; }); return d ? <span style={{ fontSize: 10, background: d.couleur + "22", color: d.couleur, borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 600, marginLeft: 4 }}>{d.icone} {d.nom}</span> : null; })()}
               </div>
             );
           })}
@@ -4460,7 +4590,7 @@ function EmailsApp() {
                   <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{selected.date_reception ? new Date(selected.date_reception).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</div>
                   {getPartenaire(selected.partenaire_id) && <div style={{ marginTop: 6 }}><span style={{ fontSize: 11, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "2px 8px", fontWeight: 600 }}>🏢 {getPartenaire(selected.partenaire_id).nom}</span></div>}
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", position: "relative" }}>
                   {/* Tags importance */}
                   <div style={{ display: "flex", gap: 4 }}>
                     {[
@@ -4480,6 +4610,23 @@ function EmailsApp() {
                     })}
                   </div>
                   {selected.type === "recu" && <button onClick={function() { openReply(selected); }} style={Object.assign({}, btnA, { fontSize: 13 })}>↩ Répondre</button>}
+                  <button onClick={function() { setMovingEmail(selected.id === movingEmail ? null : selected.id); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: movingEmail === selected.id ? "#f4f4f4" : "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>📁 Dossier</button>
+                  {movingEmail === selected.id && (
+                    <div style={{ position: "absolute", right: 0, top: "100%", background: "#fff", border: "1px solid #e0e0e0", borderRadius: 8, boxShadow: "0 4px 16px rgba(0,0,0,0.1)", zIndex: 100, minWidth: 180, padding: 6 }}>
+                      <div onClick={function() { handleMoveEmail(selected.id, null); setSelected(Object.assign({}, selected, { dossier_id: null })); }} style={{ padding: "6px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6, display: "flex", alignItems: "center", gap: 8 }}
+                        onMouseEnter={function(e) { e.currentTarget.style.background = "#f4f4f4"; }} onMouseLeave={function(e) { e.currentTarget.style.background = ""; }}>
+                        <span>📥</span> Non classé
+                      </div>
+                      {dossiers.map(function(d) {
+                        var active = selected.dossier_id === d.id;
+                        return <div key={d.id} onClick={function() { handleMoveEmail(selected.id, d.id); setSelected(Object.assign({}, selected, { dossier_id: d.id })); }} style={{ padding: "6px 10px", cursor: "pointer", fontSize: 13, borderRadius: 6, display: "flex", alignItems: "center", gap: 8, background: active ? d.couleur + "11" : "transparent", fontWeight: active ? 700 : 400 }}
+                          onMouseEnter={function(e) { if (!active) e.currentTarget.style.background = "#f4f4f4"; }} onMouseLeave={function(e) { if (!active) e.currentTarget.style.background = ""; }}>
+                          <span>{d.icone}</span> <span style={{ color: active ? d.couleur : "#333" }}>{d.nom}</span>
+                          {active && <span style={{ marginLeft: "auto", color: d.couleur }}>✓</span>}
+                        </div>;
+                      })}
+                    </div>
+                  )}
                   <button onClick={function() {
                     var newLu = !selected.lu;
                     sbUpdate("emails", selected.id, { lu: newLu }).then(function() {
@@ -4526,8 +4673,9 @@ export default function App() {
 
   // Auth
   var sessionKey = "rcn_user";
-  var storedUser = (function() { try { var s = localStorage.getItem(sessionKey); return s ? JSON.parse(s) : null; } catch(e) { return null; } })();
-  var userState = useState(storedUser); var currentUser = userState[0]; var setCurrentUser = userState[1];
+  var userState = useState(function() {
+    try { var s = localStorage.getItem("rcn_user"); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+  }); var currentUser = userState[0]; var setCurrentUser = userState[1];
   var adminState = useState(false); var adminOpen = adminState[0]; var setAdminOpen = adminState[1];
   var changePassState = useState(false); var changePassOpen = changePassState[0]; var setChangePassOpen = changePassState[1];
 
