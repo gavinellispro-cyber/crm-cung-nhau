@@ -634,11 +634,13 @@ function Dashboard(props) {
       </Modal>
       {/* FICHE PARTENAIRE depuis tâche */}
       {dashFicheId && data && (
-        <FichePartenaire
-          partenaire={data.partenaires.find(function(p) { return p.id === dashFicheId; }) || {}}
-          allPartenaires={data.partenaires || []}
-          onClose={function() { setDashFicheId(null); }}
-        />
+        <div style={{ position: "fixed", inset: 0, zIndex: 1000 }}>
+          <FichePartenaire
+            partenaire={data.partenaires.find(function(p) { return p.id === dashFicheId; }) || {}}
+            allPartenaires={data.partenaires || []}
+            onClose={function() { setDashFicheId(null); }}
+          />
+        </div>
       )}
     </div>
   );
@@ -3357,10 +3359,8 @@ function TachesWidget(props) {
 
     function handleCardClick() {
       if (t.partenaire_id) {
-        setTab("partenaires");
         onOpenFiche(t.partenaire_id);
       } else if (t._isEvtTask && evt) {
-        setTab("evenements");
         onOpenEvt(evt.id);
       }
     }
