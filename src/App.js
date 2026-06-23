@@ -4278,6 +4278,8 @@ function EmailsApp() {
                 <div style={{ fontSize: 13, fontWeight: !email.lu && email.type === "recu" ? 700 : 400, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email.sujet || "(sans objet)"}</div>
                 <div style={{ fontSize: 11, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", marginTop: 2 }}>{(email.corps || "").substring(0, 60)}</div>
                 {part && <span style={{ fontSize: 10, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 600 }}>{part.nom}</span>}
+                {email.importance === "urgent" && <span style={{ fontSize: 10, background: "#C8102E", color: "#fff", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 700, marginLeft: 4 }}>🔴 Urgent</span>}
+                {email.importance === "important" && <span style={{ fontSize: 10, background: "#BA7517", color: "#fff", borderRadius: 10, padding: "1px 6px", marginTop: 4, display: "inline-block", fontWeight: 700, marginLeft: 4 }}>🟡 Important</span>}
               </div>
             );
           })}
@@ -4313,7 +4315,36 @@ function EmailsApp() {
                   <div style={{ fontSize: 12, color: "#aaa", marginTop: 4 }}>{selected.date_reception ? new Date(selected.date_reception).toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}</div>
                   {getPartenaire(selected.partenaire_id) && <div style={{ marginTop: 6 }}><span style={{ fontSize: 11, background: "#C8102E11", color: "#C8102E", borderRadius: 10, padding: "2px 8px", fontWeight: 600 }}>🏢 {getPartenaire(selected.partenaire_id).nom}</span></div>}
                 </div>
-                {selected.type === "recu" && <button onClick={function() { openReply(selected); }} style={Object.assign({}, btnA, { fontSize: 13 })}>↩ Répondre</button>}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                  {/* Tags importance */}
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {[
+                      { key: "urgent", label: "🔴 Urgent", color: "#C8102E" },
+                      { key: "important", label: "🟡 Important", color: "#BA7517" },
+                      { key: "normal", label: "⚪ Normal", color: "#888" },
+                    ].map(function(tag) {
+                      var active = (selected.importance || "normal") === tag.key;
+                      return (
+                        <button key={tag.key} onClick={function() {
+                          sbUpdate("emails", selected.id, { importance: tag.key }).then(function() {
+                            setEmails(emails.map(function(e) { return e.id === selected.id ? Object.assign({}, e, { importance: tag.key }) : e; }));
+                            setSelected(Object.assign({}, selected, { importance: tag.key }));
+                          });
+                        }} style={{ padding: "4px 10px", borderRadius: 20, border: "2px solid " + (active ? tag.color : "#e0e0e0"), background: active ? tag.color + "18" : "#fff", color: active ? tag.color : "#888", cursor: "pointer", fontSize: 11, fontWeight: active ? 700 : 400 }}>{tag.label}</button>
+                      );
+                    })}
+                  </div>
+                  {selected.type === "recu" && <button onClick={function() { openReply(selected); }} style={Object.assign({}, btnA, { fontSize: 13 })}>↩ Répondre</button>}
+                  <button onClick={function() {
+                    var newLu = !selected.lu;
+                    sbUpdate("emails", selected.id, { lu: newLu }).then(function() {
+                      setEmails(emails.map(function(e) { return e.id === selected.id ? Object.assign({}, e, { lu: newLu }) : e; }));
+                      setSelected(Object.assign({}, selected, { lu: newLu }));
+                    });
+                  }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#444" }}>
+                    {selected.lu ? "🔵 Marquer non lu" : "✓ Marquer lu"}
+                  </button>
+                </div>
               </div>
             </div>
             <div style={{ borderTop: "1px solid #e0e0e0", paddingTop: 20 }}>
