@@ -117,7 +117,7 @@ module.exports = async function handler(req, res) {
     await processEmails(inboxRaw, 'recu');
     await processEmails(sentRaw, 'envoye');
 
-    return res.status(200).json({ synced });
+    return res.status(200).json({ synced, inboxCount: inboxRaw.length, sentCount: sentRaw.length });
   } catch (err) {
     console.error('Sync error:', err);
     return res.status(500).json({ error: err.message });
