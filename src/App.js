@@ -4128,7 +4128,8 @@ function EmailsApp() {
   var subjectState = useState(""); var subject = subjectState[0]; var setSubject = subjectState[1];
   var bodyState = useState(""); var body = bodyState[0]; var setBody = bodyState[1];
   var replyToState = useState(null); var replyTo = replyToState[0]; var setReplyTo = replyToState[1];
-  var signature = "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com";
+  var signatureState = useState("\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com"); var signature = signatureState[0]; var setSignature = signatureState[1];
+  var settingsState = useState(false); var settings = settingsState[0]; var setSettings = settingsState[1];
 
   useEffect(function() {
     Promise.all([
@@ -4221,16 +4222,34 @@ function EmailsApp() {
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               <button onClick={handleSync} disabled={syncing} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: syncing ? "#444" : "#333", color: "#fff", cursor: "pointer", fontSize: 12 }}>{syncing ? "⟳..." : "⟳"}</button>
-              <button onClick={function() { setCompose(true); setReplyTo(null); setTo(""); setSubject(""); setBody(""); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>✉️ Nouveau</button>
+              <button onClick={function() { setSettings(!settings); setCompose(false); }} title="Signature" style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: settings ? "#C8102E" : "#333", color: "#fff", cursor: "pointer", fontSize: 12 }}>✏️</button>
+              <button onClick={function() { setCompose(true); setSettings(false); setReplyTo(null); setTo(""); setSubject(""); setBody(""); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>✉️ Nouveau</button>
             </div>
           </div>
           {/* Recherche */}
           <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher..." style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "none", background: "#333", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
         </div>
+        {/* Panneau signature */}
+        {settings && (
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid #e0e0e0", background: "#f9f9f9" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a", marginBottom: 8 }}>✏️ Ma signature</div>
+            <textarea value={signature} onChange={function(e) { setSignature(e.target.value); }} style={{ width: "100%", minHeight: 80, padding: "8px 10px", borderRadius: 8, border: "1px solid #e0e0e0", fontSize: 12, fontFamily: "monospace", resize: "vertical", boxSizing: "border-box", outline: "none" }} />
+            <button onClick={function() { setSettings(false); }} style={Object.assign({}, btnP, { fontSize: 12, marginTop: 8, width: "100%" })}>Enregistrer</button>
+          </div>
+        )}
         {/* Filtres */}
         <div style={{ padding: "8px 12px", borderBottom: "1px solid #e0e0e0", display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {[["tous","Tous"],["recus","↙ Reçus"],["envoyes","↗ Envoyés"],["nonlus","Non lus"]].map(function(f) {
-            return <button key={f[0]} onClick={function() { setFilter(f[0]); }} style={{ padding: "3px 10px", borderRadius: 20, border: "1px solid " + (filter === f[0] ? "#C8102E" : "#e0e0e0"), background: filter === f[0] ? "#C8102E" : "#fff", color: filter === f[0] ? "#fff" : "#555", cursor: "pointer", fontSize: 11, fontWeight: filter === f[0] ? 600 : 400 }}>{f[1]}</button>;
+          {[
+            ["tous", "Tous", emails.length],
+            ["recus", "↙ Reçus", emails.filter(function(e) { return e.type === "recu"; }).length],
+            ["envoyes", "↗ Envoyés", emails.filter(function(e) { return e.type === "envoye"; }).length],
+            ["nonlus", "🔴 Non lus", nonLus],
+          ].map(function(f) {
+            return (
+              <button key={f[0]} onClick={function() { setFilter(f[0]); }} style={{ padding: "3px 10px", borderRadius: 20, border: "1px solid " + (filter === f[0] ? "#C8102E" : "#e0e0e0"), background: filter === f[0] ? "#C8102E" : "#fff", color: filter === f[0] ? "#fff" : "#555", cursor: "pointer", fontSize: 11, fontWeight: filter === f[0] ? 600 : 400, display: "flex", alignItems: "center", gap: 4 }}>
+                {f[1]} {f[2] > 0 && <span style={{ background: filter === f[0] ? "rgba(255,255,255,0.3)" : "#e0e0e0", borderRadius: 20, padding: "0 5px", fontSize: 10, fontWeight: 700 }}>{f[2]}</span>}
+              </button>
+            );
           })}
         </div>
         {/* Filtre partenaire */}
@@ -4245,7 +4264,7 @@ function EmailsApp() {
         {/* Liste */}
         <div style={{ flex: 1, overflowY: "auto" }}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 20, textAlign: "center", color: "#aaa", fontSize: 13 }}>Aucun email</div>
+            <div style={{ padding: 20, textAlign: "center", color: "#aaa", fontSize: 13 }}>{filter === "nonlus" ? "🎉 Aucun email non lu !" : "Aucun email"}</div>
           ) : filtered.map(function(email) {
             var isSelected = selected && selected.id === email.id;
             var part = getPartenaire(email.partenaire_id);
