@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 
 const supabase = createClient(
@@ -6,50 +6,13 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET
-);
-
-oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: 'admin@rugbycungnhau.com',
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
 });
-
-const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
-
-function makeEmail({ to, from, subject, body, threadId, replyToMessageId }) {
-  const boundary = 'rcn_boundary_' + Date.now();
-  let raw = [
-    `From: Rugby Cung Nhau <${from}>`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-  ];
-
-  if (threadId) raw.push(`In-Reply-To: ${replyToMessageId}`);
-  if (threadId) raw.push(`References: ${replyToMessageId}`);
-
-  raw = raw.concat([
-    '',
-    `--${boundary}`,
-    'Content-Type: text/plain; charset=UTF-8',
-    '',
-    body,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/html; charset=UTF-8',
-    '',
-    `<div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">${body.replace(/\n/g, '<br>')}</div>`,
-    `--${boundary}--`,
-  ]);
-
-  return Buffer.from(raw.join('\r\n'))
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-}
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -63,23 +26,23 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const from = process.env.GMAIL_USER;
-    const rawEmail = makeEmail({ to, from, subject, body, threadId, replyToMessageId });
+    const mailOptions = {
+      from: 'Rugby Cung Nhau <admin@rugbycungnhau.com>',
+      to: to,
+      subject: subject,
+      text: body,
+      html: `<div style="font-family: Arial, sans-serif; font-size: 14px;">${body.replace(/\n/g, '<br>')}</div>`,
+      ...(replyToMessageId ? { inReplyTo: replyToMessageId, references: replyToMessageId } : {}),
+    };
 
-    const sendRes = await gmail.users.messages.send({
-      userId: 'me',
-      requestBody: {
-        raw: rawEmail,
-        ...(threadId ? { threadId } : {}),
-      },
-    });
+    const info = await transporter.sendMail(mailOptions);
 
-    // Sauvegarder l'email envoyé dans Supabase
+    // Sauvegarder dans Supabase
     await supabase.from('emails').insert({
-      gmail_id: sendRes.data.id,
-      thread_id: sendRes.data.threadId,
+      gmail_id: info.messageId,
+      thread_id: threadId || info.messageId,
       partenaire_id: partenaireId || null,
-      de: `Rugby Cung Nhau <${from}>`,
+      de: 'Rugby Cung Nhau <admin@rugbycungnhau.com>',
       a: to,
       sujet: subject,
       corps: body,
@@ -88,9 +51,9 @@ module.exports = async function handler(req, res) {
       type: 'envoye',
     });
 
-    return res.status(200).json({ success: true, messageId: sendRes.data.id });
+    return res.status(200).json({ success: true, messageId: info.messageId });
   } catch (err) {
-    console.error('Gmail send error:', err);
+    console.error('Send error:', err);
     return res.status(500).json({ error: err.message });
   }
-}
+};
