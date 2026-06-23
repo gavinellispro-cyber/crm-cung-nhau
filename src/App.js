@@ -1124,6 +1124,168 @@ function EnfantsShelter(props) {
   );
 }
 
+// ── EMAIL SECTION ─────────────────────────────────────────────
+function EmailSection(props) {
+  var p = props.partenaire;
+  var openState = useState(false); var open = openState[0]; var setOpen = openState[1];
+  var emailsState = useState([]); var emails = emailsState[0]; var setEmails = emailsState[1];
+  var loadingState = useState(true); var loading = loadingState[0]; var setLoading = loadingState[1];
+  var syncingState = useState(false); var syncing = syncingState[0]; var setSyncing = syncingState[1];
+  var composeState = useState(false); var compose = composeState[0]; var setCompose = composeState[1];
+  var replyToState = useState(null); var replyTo = replyToState[0]; var setReplyTo = replyToState[1];
+  var sendingState = useState(false); var sending = sendingState[0]; var setSending = sendingState[1];
+  var toState = useState(p.contact_email || ""); var to = toState[0]; var setTo = toState[1];
+  var subjectState = useState(""); var subject = subjectState[0]; var setSubject = subjectState[1];
+  var bodyState = useState(""); var body = bodyState[0]; var setBody = bodyState[1];
+  var signatureState = useState("\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com"); var signature = signatureState[0];
+
+  useEffect(function() {
+    if (!open) return;
+    setLoading(true);
+    sbFetch("emails", { select: "*", filter: "partenaire_id=eq." + p.id, order: "date_reception.desc" })
+      .then(function(rows) { setEmails(rows); setLoading(false); })
+      .catch(function() { setLoading(false); });
+  }, [open, p.id]);
+
+  function handleSync() {
+    setSyncing(true);
+    fetch("/api/gmail-sync", { method: "POST" })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        setSyncing(false);
+        // Recharger les emails
+        return sbFetch("emails", { select: "*", filter: "partenaire_id=eq." + p.id, order: "date_reception.desc" });
+      })
+      .then(function(rows) { setEmails(rows); })
+      .catch(function(e) { alert("Erreur sync : " + e.message); setSyncing(false); });
+  }
+
+  function handleSend() {
+    if (!to || !subject || !body) { alert("Destinataire, sujet et corps sont requis."); return; }
+    setSending(true);
+    var fullBody = body + signature;
+    fetch("/api/gmail-send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: to,
+        subject: replyTo ? (subject.startsWith("Re:") ? subject : "Re: " + subject) : subject,
+        body: fullBody,
+        threadId: replyTo ? replyTo.thread_id : null,
+        replyToMessageId: replyTo ? replyTo.gmail_id : null,
+        partenaireId: p.id,
+      }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error);
+        setSending(false);
+        setCompose(false);
+        setReplyTo(null);
+        setSubject("");
+        setBody("");
+        // Ajouter l'email envoyé à la liste locale
+        sbFetch("emails", { select: "*", filter: "partenaire_id=eq." + p.id, order: "date_reception.desc" })
+          .then(function(rows) { setEmails(rows); });
+      })
+      .catch(function(e) { alert("Erreur envoi : " + e.message); setSending(false); });
+  }
+
+  function handleMarkRead(emailId) {
+    sbUpdate("emails", emailId, { lu: true })
+      .then(function() { setEmails(emails.map(function(e) { return e.id === emailId ? Object.assign({}, e, { lu: true }) : e; })); });
+  }
+
+  function openReply(email) {
+    setReplyTo(email);
+    setTo(email.de.match(/<(.+?)>/) ? email.de.match(/<(.+?)>/)[1] : email.de);
+    setSubject(email.sujet);
+    setBody("");
+    setCompose(true);
+  }
+
+  var nonLus = emails.filter(function(e) { return !e.lu && e.type === "recu"; }).length;
+
+  return (
+    <div style={{ padding: "16px 24px", borderTop: "1px solid #e8e8e8" }}>
+      {/* Header accordéon */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", userSelect: "none" }} onClick={function() { setOpen(!open); }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 18 }}>📧</span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>Emails</span>
+          {nonLus > 0 && <span style={{ background: "#C8102E", color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, fontWeight: 700 }}>{nonLus} non lu{nonLus > 1 ? "s" : ""}</span>}
+          {emails.length > 0 && nonLus === 0 && <span style={{ background: "#e0e0e0", color: "#888", borderRadius: 20, padding: "1px 8px", fontSize: 11 }}>{emails.length}</span>}
+        </div>
+        <span style={{ fontSize: 16, color: "#888", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▾</span>
+      </div>
+
+      {open && (
+        <div style={{ marginTop: 14 }}>
+          {/* Barre d'outils */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button onClick={function() { setCompose(true); setReplyTo(null); setTo(p.contact_email || ""); setSubject(""); setBody(""); }} style={Object.assign({}, btnA, { fontSize: 12 })}>✉️ Nouveau</button>
+            <button onClick={handleSync} disabled={syncing} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e0e0e0", background: "#fff", cursor: "pointer", fontSize: 12, color: "#444" }}>{syncing ? "⟳ Sync..." : "⟳ Synchroniser"}</button>
+          </div>
+
+          {/* Formulaire composition */}
+          {compose && (
+            <div style={{ background: "#f4f4f4", borderRadius: 12, padding: 16, marginBottom: 14, border: "1px solid #e0e0e0" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", marginBottom: 12 }}>
+                {replyTo ? "↩ Répondre à " + replyTo.de : "✉️ Nouveau message"}
+              </div>
+              <Field label="À"><input style={inp} value={to} onChange={function(e) { setTo(e.target.value); }} /></Field>
+              <Field label="Sujet"><input style={inp} value={subject} onChange={function(e) { setSubject(e.target.value); }} placeholder={replyTo ? "Re: " + replyTo.sujet : ""} /></Field>
+              <Field label="Message">
+                <textarea style={Object.assign({}, inp, { minHeight: 120, resize: "vertical" })} value={body} onChange={function(e) { setBody(e.target.value); }} placeholder="Votre message..." />
+              </Field>
+              <div style={{ fontSize: 11, color: "#aaa", marginBottom: 10, padding: "6px 10px", background: "#fff", borderRadius: 6, border: "1px solid #e8e8e8" }}>
+                {signature}
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button onClick={function() { setCompose(false); setReplyTo(null); }} style={btnS}>Annuler</button>
+                <button onClick={handleSend} disabled={sending} style={Object.assign({}, btnP, { opacity: sending ? 0.6 : 1 })}>{sending ? "Envoi..." : "📤 Envoyer"}</button>
+              </div>
+            </div>
+          )}
+
+          {/* Liste emails */}
+          {loading ? <Spinner /> : emails.length === 0 ? (
+            <div style={{ fontSize: 13, color: "#aaa", textAlign: "center", padding: "16px 0" }}>
+              Aucun email — cliquez "Synchroniser" pour charger les emails Gmail
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {emails.map(function(email) {
+                var isRecu = email.type === "recu";
+                var dateStr = email.date_reception ? new Date(email.date_reception).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+                return (
+                  <div key={email.id} onClick={function() { if (!email.lu) handleMarkRead(email.id); }} style={{ background: email.lu ? "#fafafa" : "#fff", border: "1px solid " + (email.lu ? "#e8e8e8" : "#C8102E33"), borderLeft: "3px solid " + (isRecu ? (email.lu ? "#e0e0e0" : "#C8102E") : "#1D9E75"), borderRadius: 10, padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
+                          <span style={{ fontSize: 11, background: isRecu ? "#C8102E11" : "#1D9E7511", color: isRecu ? "#C8102E" : "#1D9E75", borderRadius: 20, padding: "1px 7px", fontWeight: 600 }}>{isRecu ? "↙ Reçu" : "↗ Envoyé"}</span>
+                          {!email.lu && isRecu && <span style={{ fontSize: 10, background: "#C8102E", color: "#fff", borderRadius: 20, padding: "1px 6px", fontWeight: 700 }}>NOUVEAU</span>}
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: email.lu ? 400 : 700, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email.sujet || "(sans objet)"}</div>
+                        <div style={{ fontSize: 11, color: "#888", marginTop: 2 }}>{isRecu ? email.de : "À : " + email.a}</div>
+                        {email.corps && <div style={{ fontSize: 12, color: "#aaa", marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email.corps.substring(0, 100)}...</div>}
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+                        <div style={{ fontSize: 11, color: "#aaa" }}>{dateStr}</div>
+                        {isRecu && <button onClick={function(ev) { ev.stopPropagation(); openReply(email); }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #C8102E44", background: "#C8102E11", color: "#C8102E", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>↩ Répondre</button>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── FICHE PARTENAIRE ──────────────────────────────────────────
 function FichePartenaire(props) {
   var p = props.partenaire;
@@ -1349,6 +1511,9 @@ function FichePartenaire(props) {
 
         {/* Liaisons entre partenaires */}
         <LiaisonsPartenaire partenaire={p} allPartenaires={props.allPartenaires || []} />
+
+        {/* Emails */}
+        <EmailSection partenaire={p} />
 
         <DocumentsSection entityType="partenaire" entityId={p.id} />
 
