@@ -226,6 +226,8 @@ function Dashboard(props) {
   var setDashView = props.setDashView || function() {};
   var s = useState(null); var data = s[0]; var setData = s[1];
   var ls = useState(true); var loading = ls[0]; var setLoading = ls[1];
+  var dashFicheState = useState(null); var dashFicheId = dashFicheState[0]; var setDashFicheId = dashFicheState[1];
+  var dashEvtState = useState(null); var dashEvtId = dashEvtState[0]; var setDashEvtId = dashEvtState[1];
 
   useEffect(function() {
     Promise.all([
@@ -328,7 +330,7 @@ function Dashboard(props) {
         <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#C8102E" : "transparent", color: dashView === "taches" ? "#fff" : "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
-        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} />
+        <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} setTab={setTab} onOpenFiche={function(id) { setDashFicheId(id); }} onOpenEvt={function(id) { setDashEvtId(id); }} />
       </div>
       <div style={{ display: ["general","evtMois","evtAnnee","part_ONG","part_Shelter","part_Ecole","part_Sponsor","coaches","retard","actions"].indexOf(dashView) >= 0 ? "flex" : "none", flexDirection: "column", gap: 20 }}>
 
@@ -630,11 +632,17 @@ function Dashboard(props) {
           <button onClick={handleAddTache} disabled={!tacheForm.titre} style={Object.assign({}, btnP, { opacity: tacheForm.titre ? 1 : 0.5 })}>Enregistrer</button>
         </div>
       </Modal>
+      {/* FICHE PARTENAIRE depuis tâche */}
+      {dashFicheId && data && (
+        <FichePartenaire
+          partenaire={data.partenaires.find(function(p) { return p.id === dashFicheId; }) || {}}
+          allPartenaires={data.partenaires || []}
+          onClose={function() { setDashFicheId(null); }}
+        />
+      )}
     </div>
   );
 }
-
-// ── DOCUMENTS (shared component) ─────────────────────────────
 function DocumentsSection(props) {
   var entityType = props.entityType; // "partenaire" or "coach"
   var entityId = props.entityId;
@@ -3301,6 +3309,9 @@ function TachesWidget(props) {
   var onToggle = props.onToggle;
   var onToggleAction = props.onToggleAction || function() {};
   var onToggleEvtTask = props.onToggleEvtTask || function() {};
+  var setTab = props.setTab || function() {};
+  var onOpenFiche = props.onOpenFiche || function() {};
+  var onOpenEvt = props.onOpenEvt || function() {};
 
   var PRIORITE_ACTION = { "Visite terrain": "Haute", "RDV": "Haute", "Appel": "Moyenne", "Email": "Moyenne", "Autre": "Basse" };
 
@@ -3342,16 +3353,35 @@ function TachesWidget(props) {
     var cfg = PRIORITE_CONFIG[t.priorite] || PRIORITE_CONFIG.Moyenne;
     var isLate = t.date_echeance && t.date_echeance < today;
     var part = t.partenaire_id ? partenaires.find(function(p) { return p.id === t.partenaire_id; }) : null;
+    var evt = t._isEvtTask ? evenements.find(function(e) { return e.id === t.evenement_id; }) : null;
+
+    function handleCardClick() {
+      if (t.partenaire_id) {
+        setTab("partenaires");
+        onOpenFiche(t.partenaire_id);
+      } else if (t._isEvtTask && evt) {
+        setTab("evenements");
+        onOpenEvt(evt.id);
+      }
+    }
+
+    var isClickable = !!(t.partenaire_id || (t._isEvtTask && evt));
+
     return (
-      <div style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e8e8"), borderLeft: "3px solid " + cfg.color, borderRadius: 8, padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start" }}>
-        <div onClick={function() { if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2 }} />
+      <div onClick={isClickable ? handleCardClick : undefined} style={{ background: "#fff", border: "1px solid " + (isLate ? "#E24B4A44" : "#e8e8e8"), borderLeft: "3px solid " + cfg.color, borderRadius: 8, padding: "10px 12px", display: "flex", gap: 10, alignItems: "flex-start", cursor: isClickable ? "pointer" : "default", transition: "box-shadow .15s" }}
+        onMouseEnter={isClickable ? function(e) { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.1)"; } : undefined}
+        onMouseLeave={isClickable ? function(e) { e.currentTarget.style.boxShadow = "none"; } : undefined}>
+        <div onClick={function(e) { e.stopPropagation(); if (t._isAction) onToggleAction({id: t._originalId}); else if (t._isEvtTask) onToggleEvtTask({id: t._originalId}); else onToggle(t); }} style={{ width: 18, height: 18, borderRadius: "50%", border: "2px solid " + cfg.color, background: "transparent", flexShrink: 0, cursor: "pointer", marginTop: 2 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3, wordBreak: "break-word" }}>{t.titre}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a", lineHeight: 1.3, wordBreak: "break-word" }}>
+            {t.titre}
+            {isClickable && <span style={{ fontSize: 10, color: "#aaa", marginLeft: 6 }}>↗</span>}
+          </div>
           {t.description && <div style={{ fontSize: 11, color: "#888", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.description}</div>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 5 }}>
             {t.date_echeance && <span style={{ fontSize: 11, color: isLate ? "#E24B4A" : "#888" }}>📅 {t.date_echeance}{isLate ? " ⚠️" : ""}</span>}
             {t.assigne_a && <span style={{ fontSize: 11, color: "#C8102E", fontWeight: 500 }}>→ {t.assigne_a}</span>}
-            {(part || t._partNom || t.partenaire_nom_temp) && <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 500 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
+            {(part || t._partNom || t.partenaire_nom_temp) && <span style={{ fontSize: 11, color: "#1D9E75", fontWeight: 600 }}>🏢 {part ? part.nom : (t._partNom || t.partenaire_nom_temp)}</span>}
             {t._isAction && <span style={{ fontSize: 10, background: "#BA751722", color: "#BA7517", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>Action partenaire</span>}
             {t._isEvtTask && <span style={{ fontSize: 10, background: "#9B1C1C22", color: "#9B1C1C", borderRadius: 10, padding: "1px 6px", fontWeight: 600 }}>📅 {t._evtNom}</span>}
           </div>
