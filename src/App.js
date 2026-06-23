@@ -4158,8 +4158,34 @@ function EmailsApp() {
   var subjectState = useState(""); var subject = subjectState[0]; var setSubject = subjectState[1];
   var bodyState = useState(""); var body = bodyState[0]; var setBody = bodyState[1];
   var replyToState = useState(null); var replyTo = replyToState[0]; var setReplyTo = replyToState[1];
-  var signatureState = useState("\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com"); var signature = signatureState[0]; var setSignature = signatureState[1];
   var settingsState = useState(false); var settings = settingsState[0]; var setSettings = settingsState[1];
+
+  // Gestionnaire de signatures
+  var SIG_KEY = "rcn_signatures";
+  var SIG_ACTIVE_KEY = "rcn_signature_active";
+  function loadSigs() {
+    try { return JSON.parse(localStorage.getItem(SIG_KEY)) || [{ id: 1, nom: "Par défaut", texte: "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com", logo: null }]; } catch(e) { return [{ id: 1, nom: "Par défaut", texte: "\n\n--\nRugby Cung Nhau\nadmin@rugbycungnhau.com", logo: null }]; }
+  }
+  function loadActiveSigId() {
+    try { return parseInt(localStorage.getItem(SIG_ACTIVE_KEY)) || 1; } catch(e) { return 1; }
+  }
+  var sigsState = useState(loadSigs); var sigs = sigsState[0]; var setSigs = sigsState[1];
+  var activeSigIdState = useState(loadActiveSigId); var activeSigId = activeSigIdState[0]; var setActiveSigId = activeSigIdState[1];
+  var editingSigState = useState(null); var editingSig = editingSigState[0]; var setEditingSig = editingSigState[1];
+  var newSigState = useState(false); var newSig = newSigState[0]; var setNewSig = newSigState[1];
+  var newSigFormState = useState({ nom: "", texte: "", logo: null }); var newSigForm = newSigFormState[0]; var setNewSigForm = newSigFormState[1];
+
+  function saveSigs(list) { setSigs(list); try { localStorage.setItem(SIG_KEY, JSON.stringify(list)); } catch(e) {} }
+  function saveActiveSig(id) { setActiveSigId(id); try { localStorage.setItem(SIG_ACTIVE_KEY, String(id)); } catch(e) {} }
+  var activeSig = sigs.find(function(s) { return s.id === activeSigId; }) || sigs[0] || { texte: "" };
+  var signature = activeSig ? (activeSig.logo ? "" : "") + activeSig.texte : "";
+
+  function handleLogoUpload(file, cb) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) { cb(e.target.result); };
+    reader.readAsDataURL(file);
+  }
 
   useEffect(function() {
     Promise.all([
@@ -4259,12 +4285,90 @@ function EmailsApp() {
           {/* Recherche */}
           <input value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="🔍 Rechercher..." style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "none", background: "#333", color: "#fff", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
         </div>
-        {/* Panneau signature */}
+        {/* Panneau signatures */}
         {settings && (
-          <div style={{ padding: "12px 14px", borderBottom: "1px solid #e0e0e0", background: "#f9f9f9" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#1a1a1a", marginBottom: 8 }}>✏️ Ma signature</div>
-            <textarea value={signature} onChange={function(e) { setSignature(e.target.value); }} style={{ width: "100%", minHeight: 80, padding: "8px 10px", borderRadius: 8, border: "1px solid #e0e0e0", fontSize: 12, fontFamily: "monospace", resize: "vertical", boxSizing: "border-box", outline: "none" }} />
-            <button onClick={function() { setSettings(false); }} style={Object.assign({}, btnP, { fontSize: 12, marginTop: 8, width: "100%" })}>Enregistrer</button>
+          <div style={{ padding: "12px 14px", borderBottom: "1px solid #e0e0e0", background: "#f9f9f9", maxHeight: 380, overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#1a1a1a" }}>✏️ Signatures</span>
+              <button onClick={function() { setNewSig(true); setEditingSig(null); setNewSigForm({ nom: "", texte: "\n\n--\n", logo: null }); }} style={{ padding: "3px 8px", borderRadius: 6, border: "none", background: "#C8102E", color: "#fff", cursor: "pointer", fontSize: 11, fontWeight: 600 }}>+ Nouvelle</button>
+            </div>
+
+            {/* Liste des signatures */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: newSig ? 10 : 0 }}>
+              {sigs.map(function(s) {
+                var isActive = s.id === activeSigId;
+                var isEditing = editingSig && editingSig.id === s.id;
+                return (
+                  <div key={s.id} style={{ border: "2px solid " + (isActive ? "#C8102E" : "#e0e0e0"), borderRadius: 8, overflow: "hidden", background: "#fff" }}>
+                    {/* En-tête */}
+                    <div style={{ padding: "7px 10px", display: "flex", alignItems: "center", gap: 8, background: isActive ? "#C8102E08" : "#fff" }}>
+                      <input type="radio" checked={isActive} onChange={function() { saveActiveSig(s.id); setEditingSig(null); }} style={{ cursor: "pointer", accentColor: "#C8102E" }} />
+                      <span style={{ flex: 1, fontSize: 12, fontWeight: isActive ? 700 : 500, color: isActive ? "#C8102E" : "#333" }}>{s.nom}</span>
+                      {s.logo && <img src={s.logo} alt="logo" style={{ height: 18, objectFit: "contain" }} />}
+                      <button onClick={function() { setEditingSig(Object.assign({}, s)); setNewSig(false); }} style={{ padding: "2px 7px", borderRadius: 5, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#444" }}>✏️</button>
+                      {sigs.length > 1 && <button onClick={function() {
+                        var newList = sigs.filter(function(x) { return x.id !== s.id; });
+                        saveSigs(newList);
+                        if (isActive && newList.length > 0) saveActiveSig(newList[0].id);
+                      }} style={{ padding: "2px 7px", borderRadius: 5, border: "1px solid #fdd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#E24B4A" }}>🗑️</button>}
+                    </div>
+                    {/* Édition inline */}
+                    {isEditing && (
+                      <div style={{ padding: "8px 10px", borderTop: "1px solid #e8e8e8", background: "#fafafa" }}>
+                        <input style={Object.assign({}, inp, { fontSize: 12, marginBottom: 6 })} value={editingSig.nom} placeholder="Nom de la signature" onChange={function(e) { setEditingSig(Object.assign({}, editingSig, { nom: e.target.value })); }} />
+                        <textarea style={Object.assign({}, inp, { fontSize: 11, fontFamily: "monospace", minHeight: 60, resize: "vertical", marginBottom: 6 })} value={editingSig.texte} onChange={function(e) { setEditingSig(Object.assign({}, editingSig, { texte: e.target.value })); }} />
+                        <div style={{ marginBottom: 6 }}>
+                          <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 4 }}>Logo (optionnel)</label>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            {editingSig.logo && <img src={editingSig.logo} alt="logo" style={{ height: 28, objectFit: "contain", border: "1px solid #e0e0e0", borderRadius: 4, padding: 2 }} />}
+                            <label style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#444" }}>
+                              📁 {editingSig.logo ? "Changer" : "Ajouter logo"}
+                              <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handleLogoUpload(e.target.files[0], function(data) { setEditingSig(Object.assign({}, editingSig, { logo: data })); }); }} />
+                            </label>
+                            {editingSig.logo && <button onClick={function() { setEditingSig(Object.assign({}, editingSig, { logo: null })); }} style={{ fontSize: 11, color: "#E24B4A", background: "none", border: "none", cursor: "pointer" }}>✕ Retirer</button>}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          <button onClick={function() { setEditingSig(null); }} style={Object.assign({}, btnS, { fontSize: 11 })}>Annuler</button>
+                          <button onClick={function() {
+                            var updated = sigs.map(function(x) { return x.id === editingSig.id ? editingSig : x; });
+                            saveSigs(updated); setEditingSig(null);
+                          }} style={Object.assign({}, btnP, { fontSize: 11 })}>Enregistrer</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Nouvelle signature */}
+            {newSig && (
+              <div style={{ border: "2px solid #C8102E44", borderRadius: 8, padding: "10px", background: "#fff", marginTop: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#C8102E", marginBottom: 8 }}>Nouvelle signature</div>
+                <input style={Object.assign({}, inp, { fontSize: 12, marginBottom: 6 })} value={newSigForm.nom} placeholder="Nom (ex: Formelle, Courte...)" onChange={function(e) { setNewSigForm(Object.assign({}, newSigForm, { nom: e.target.value })); }} />
+                <textarea style={Object.assign({}, inp, { fontSize: 11, fontFamily: "monospace", minHeight: 60, resize: "vertical", marginBottom: 6 })} value={newSigForm.texte} onChange={function(e) { setNewSigForm(Object.assign({}, newSigForm, { texte: e.target.value })); }} />
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    {newSigForm.logo && <img src={newSigForm.logo} alt="logo" style={{ height: 28, objectFit: "contain", border: "1px solid #e0e0e0", borderRadius: 4, padding: 2 }} />}
+                    <label style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer", fontSize: 11, color: "#444" }}>
+                      📁 {newSigForm.logo ? "Changer logo" : "Ajouter logo"}
+                      <input type="file" accept="image/*" style={{ display: "none" }} onChange={function(e) { handleLogoUpload(e.target.files[0], function(data) { setNewSigForm(Object.assign({}, newSigForm, { logo: data })); }); }} />
+                    </label>
+                    {newSigForm.logo && <button onClick={function() { setNewSigForm(Object.assign({}, newSigForm, { logo: null })); }} style={{ fontSize: 11, color: "#E24B4A", background: "none", border: "none", cursor: "pointer" }}>✕</button>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                  <button onClick={function() { setNewSig(false); }} style={Object.assign({}, btnS, { fontSize: 11 })}>Annuler</button>
+                  <button onClick={function() {
+                    if (!newSigForm.nom) return;
+                    var maxId = sigs.reduce(function(m, s) { return Math.max(m, s.id); }, 0);
+                    var newList = sigs.concat(Object.assign({}, newSigForm, { id: maxId + 1 }));
+                    saveSigs(newList); setNewSig(false); setNewSigForm({ nom: "", texte: "\n\n--\n", logo: null });
+                  }} disabled={!newSigForm.nom} style={Object.assign({}, btnP, { fontSize: 11, opacity: newSigForm.nom ? 1 : 0.5 })}>Créer</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
         {/* Filtres */}
@@ -4327,7 +4431,15 @@ function EmailsApp() {
             <Field label="Message">
               <textarea style={Object.assign({}, inp, { minHeight: 200, resize: "vertical", fontFamily: "system-ui" })} value={body} onChange={function(e) { setBody(e.target.value); }} placeholder="Votre message..." />
             </Field>
-            <div style={{ background: "#f4f4f4", padding: "8px 12px", borderRadius: 8, fontSize: 12, color: "#888", fontFamily: "monospace" }}>{signature}</div>
+            <div style={{ background: "#f4f4f4", padding: "8px 12px", borderRadius: 8, fontSize: 12, color: "#888" }}>
+              {activeSig && activeSig.logo && <img src={activeSig.logo} alt="logo" style={{ height: 32, objectFit: "contain", display: "block", marginBottom: 6 }} />}
+              <div style={{ fontFamily: "monospace", whiteSpace: "pre-wrap" }}>{signature}</div>
+              {sigs.length > 1 && (
+                <select value={activeSigId} onChange={function(e) { saveActiveSig(parseInt(e.target.value)); }} style={{ marginTop: 8, fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #ddd", background: "#fff", cursor: "pointer" }}>
+                  {sigs.map(function(s) { return <option key={s.id} value={s.id}>{s.nom}</option>; })}
+                </select>
+              )}
+            </div>
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={function() { setCompose(false); setReplyTo(null); }} style={btnS}>Annuler</button>
               <button onClick={handleSend} disabled={sending} style={Object.assign({}, btnP, { opacity: sending ? 0.6 : 1 })}>{sending ? "Envoi..." : "📤 Envoyer"}</button>
@@ -4411,17 +4523,17 @@ export default function App() {
 
   // Auth
   var sessionKey = "rcn_user";
-  var storedUser = (function() { try { var s = sessionStorage.getItem(sessionKey); return s ? JSON.parse(s) : null; } catch(e) { return null; } })();
+  var storedUser = (function() { try { var s = localStorage.getItem(sessionKey); return s ? JSON.parse(s) : null; } catch(e) { return null; } })();
   var userState = useState(storedUser); var currentUser = userState[0]; var setCurrentUser = userState[1];
   var adminState = useState(false); var adminOpen = adminState[0]; var setAdminOpen = adminState[1];
   var changePassState = useState(false); var changePassOpen = changePassState[0]; var setChangePassOpen = changePassState[1];
 
   function handleLogin(user) {
-    sessionStorage.setItem(sessionKey, JSON.stringify(user));
+    localStorage.setItem(sessionKey, JSON.stringify(user));
     setCurrentUser(user);
   }
   function handleLogout() {
-    sessionStorage.removeItem(sessionKey);
+    localStorage.removeItem(sessionKey);
     setCurrentUser(null);
   }
 
