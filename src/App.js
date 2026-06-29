@@ -2944,9 +2944,37 @@ function Coaches() {
   function set(k, v) { setForm(Object.assign({}, form, { [k]: v })); }
   function setCF(k, v) { setEditCoachForm(Object.assign({}, editCoachForm, { [k]: v })); }
 
+  var evtCoachMapState = useState({}); var evtCoachData = evtCoachMapState[0]; var setEvtCoachData = evtCoachMapState[1];
+  var evtTermineIdsState = useState(new Set()); var evtTermineIds = evtTermineIdsState[0]; var setEvtTermineIds = evtTermineIdsState[1];
+
   useEffect(function() {
-    sbFetch("coaches", { select: "*", order: "sessions_completees.desc" }).then(function(r) { setData(r); setLoading(false); });
+    Promise.all([
+      sbFetch("coaches", { select: "*", order: "nom.asc" }),
+      sbFetch("evenement_coaches", { select: "coach_id,evenement_id" }),
+      sbFetch("evenements", { select: "id,statut", filter: "statut=eq.Termine" }),
+    ]).then(function(r) {
+      setData(r[0]);
+      // Construire map coach_id -> [evenement_id]
+      var cmap = {};
+      r[1].forEach(function(ec) {
+        if (!cmap[ec.coach_id]) cmap[ec.coach_id] = [];
+        cmap[ec.coach_id].push(ec.evenement_id);
+      });
+      setEvtCoachData(cmap);
+      // Set des ids d'événements terminés
+      setEvtTermineIds(new Set(r[2].map(function(e) { return e.id; })));
+      setLoading(false);
+    });
   }, []);
+
+  function getSessionsTerminees(coachId) {
+    var evtIds = evtCoachData[coachId] || [];
+    return evtIds.filter(function(id) { return evtTermineIds.has(id); }).length;
+  }
+
+  function getSessionsProgrammees(coachId) {
+    return (evtCoachData[coachId] || []).length;
+  }
 
   useEffect(function() {
     if (!ficheCoach) { setCoachEvts([]); return; }
@@ -3012,9 +3040,13 @@ function Coaches() {
   function bgLabel(v) { return v === "CONFIRMED" ? "Confirmé" : v; }
 
   // Statistiques d'en-tête
-  var totalSessions = data.reduce(function(s, c) { return s + (Number(c.sessions_completees) || 0); }, 0);
+  var totalSessions = Object.keys(evtCoachData).reduce(function(s, cid) { return s + getSessionsTerminees(cid); }, 0);
   var actifs = data.filter(function(c) { return c.statut === "Actif"; }).length;
-  var avgTaux = data.length ? Math.round(data.reduce(function(s, c) { return s + pctOf(c); }, 0) / data.length) : 0;
+  var avgTaux = data.length ? Math.round(data.reduce(function(s, c) {
+    var prog = getSessionsProgrammees(c.id);
+    var term = getSessionsTerminees(c.id);
+    return s + (prog > 0 ? Math.round(term / prog * 100) : 0);
+  }, 0) / data.length) : 0;
 
   // Filtrage + tri
   var filtered = data.filter(function(c) {
@@ -3028,9 +3060,13 @@ function Coaches() {
   });
   var sorted = filtered.slice().sort(function(a, b) {
     if (sortBy === "nom") return ((a.prenom || "") + (a.nom || "")).localeCompare((b.prenom || "") + (b.nom || ""));
-    if (sortBy === "taux") return pctOf(b) - pctOf(a);
+    if (sortBy === "taux") {
+      var pA = getSessionsProgrammees(a.id) > 0 ? getSessionsTerminees(a.id) / getSessionsProgrammees(a.id) : 0;
+      var pB = getSessionsProgrammees(b.id) > 0 ? getSessionsTerminees(b.id) / getSessionsProgrammees(b.id) : 0;
+      return pB - pA;
+    }
     if (sortBy === "statut") return (a.statut || "").localeCompare(b.statut || "");
-    return (Number(b.sessions_completees) || 0) - (Number(a.sessions_completees) || 0);
+    return getSessionsTerminees(b.id) - getSessionsTerminees(a.id);
   });
   var showMedals = sortBy === "sessions" && fStatut === "Tous" && fRole === "Tous" && fSport === "Tous" && !search.trim();
   var filtresActifs = fStatut !== "Tous" || fRole !== "Tous" || fSport !== "Tous" || search.trim();
@@ -3079,9 +3115,9 @@ function Coaches() {
       {data.length === 0 ? <Empty msg="Aucun coach" /> : sorted.length === 0 ? <Empty msg="Aucun coach ne correspond aux filtres" /> : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
           {sorted.map(function(c, idx) {
-            var sessionsTotal = Number(c.sessions_completees) || 0;
-            var sessionsProg = Number(c.sessions_programmees) || 0;
-            var pct = pctOf(c);
+            var sessionsTerminees = getSessionsTerminees(c.id);
+            var sessionsProgrammees = getSessionsProgrammees(c.id);
+            var pct = sessionsProgrammees > 0 ? Math.round(sessionsTerminees / sessionsProgrammees * 100) : 0;
             var STATUT_C = { Actif: "#1D9E75", Inactif: "#888780", Occasionnel: "#BA7517" };
             var color = STATUT_C[c.statut] || "#888780";
             var medal = showMedals ? (idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : "") : "";
@@ -3116,7 +3152,7 @@ function Coaches() {
                   <div style={{ marginTop: 10 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#444", marginBottom: 4 }}>
                       <span>Sessions</span>
-                      <span style={{ fontWeight: 600, color: "#C8102E" }}>{sessionsTotal}/{sessionsProg}</span>
+                      <span style={{ fontWeight: 600, color: "#C8102E" }}>{sessionsTerminees} terminée{sessionsTerminees > 1 ? "s" : ""} / {sessionsProgrammees} assignée{sessionsProgrammees > 1 ? "s" : ""}</span>
                     </div>
                     <div style={{ background: "#e8e8e8", borderRadius: 4, height: 6 }}>
                       <div style={{ background: "#C8102E", borderRadius: 4, height: 6, width: pct + "%" }} />
@@ -3178,20 +3214,20 @@ function Coaches() {
                 <div style={{ fontSize: 12, fontWeight: 600, color: "#C8102E", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Sessions</div>
                 <div style={{ display: "flex", gap: 16, marginBottom: 12 }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#C8102E" }}>{ficheCoach.sessions_completees || 0}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>Complétées</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#C8102E" }}>{getSessionsTerminees(ficheCoach.id)}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>Terminées</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#9B1C1C" }}>{ficheCoach.sessions_programmees || 0}</div>
-                    <div style={{ fontSize: 11, color: "#888" }}>Programmées</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#9B1C1C" }}>{getSessionsProgrammees(ficheCoach.id)}</div>
+                    <div style={{ fontSize: 11, color: "#888" }}>Assignées</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: "#1D9E75" }}>{pctOf(ficheCoach)}%</div>
+                    <div style={{ fontSize: 28, fontWeight: 700, color: "#1D9E75" }}>{getSessionsProgrammees(ficheCoach.id) > 0 ? Math.round(getSessionsTerminees(ficheCoach.id) / getSessionsProgrammees(ficheCoach.id) * 100) : 0}%</div>
                     <div style={{ fontSize: 11, color: "#888" }}>Taux</div>
                   </div>
                 </div>
                 <div style={{ background: "#e0e0e0", borderRadius: 6, height: 8 }}>
-                  <div style={{ background: "#C8102E", borderRadius: 6, height: 8, width: pctOf(ficheCoach) + "%" }} />
+                  <div style={{ background: "#C8102E", borderRadius: 6, height: 8, width: (getSessionsProgrammees(ficheCoach.id) > 0 ? Math.round(getSessionsTerminees(ficheCoach.id) / getSessionsProgrammees(ficheCoach.id) * 100) : 0) + "%" }} />
                 </div>
               </div>
               {ficheCoach.background_check && <div style={{ marginTop: 12, fontSize: 13, color: bgColor(ficheCoach.background_check), fontWeight: 500 }}>✓ Background check : {bgLabel(ficheCoach.background_check)}</div>}
