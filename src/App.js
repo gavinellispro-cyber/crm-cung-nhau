@@ -3150,14 +3150,18 @@ function Coaches() {
                   <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{c.role} · {c.pays || "—"}</div>
                   {c.langues && <div style={{ fontSize: 11, color: "#aaa", marginTop: 2 }}>{c.langues}</div>}
                   <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#444", marginBottom: 4 }}>
-                      <span>Sessions</span>
-                      <span style={{ fontWeight: 600, color: "#C8102E" }}>{sessionsTerminees} terminée{sessionsTerminees > 1 ? "s" : ""} / {sessionsProgrammees} assignée{sessionsProgrammees > 1 ? "s" : ""}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "#666", marginBottom: 4 }}>
+                      <span style={{ color: "#888" }}>Sessions</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{ fontWeight: 700, color: sessionsTerminees > 0 ? "#1D9E75" : "#ccc", fontSize: 14 }}>{sessionsTerminees}</span>
+                        <span style={{ color: "#ccc", fontSize: 11 }}>/</span>
+                        <span style={{ fontWeight: 500, color: "#888", fontSize: 12 }}>{sessionsProgrammees}</span>
+                      </div>
                     </div>
-                    <div style={{ background: "#e8e8e8", borderRadius: 4, height: 6 }}>
-                      <div style={{ background: "#C8102E", borderRadius: 4, height: 6, width: pct + "%" }} />
+                    <div style={{ background: "#e8e8e8", borderRadius: 4, height: 5 }}>
+                      <div style={{ background: sessionsTerminees > 0 ? "#1D9E75" : "#e8e8e8", borderRadius: 4, height: 5, width: pct + "%", transition: "width .3s" }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "#aaa", marginTop: 3, textAlign: "right" }}>{pct}% complété</div>
+                    <div style={{ fontSize: 10, color: "#bbb", marginTop: 2, textAlign: "right" }}>{pct}% complété</div>
                   </div>
                   {c.background_check && <div style={{ fontSize: 11, color: bgColor(c.background_check), marginTop: 6, fontWeight: 500 }}>✓ {bgLabel(c.background_check)}</div>}
                 </div>
