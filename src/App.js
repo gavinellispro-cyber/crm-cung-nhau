@@ -2428,6 +2428,9 @@ function Evenements() {
 
   function handleUpdateEvt() {
     var payload = { titre: editingEvt.titre, type: editingEvt.type, date_debut: editingEvt.date_debut, lieu: editingEvt.lieu, nombre_enfants_presents: editingEvt.nombre_enfants_presents || null, statut: editingEvt.statut, notes: editingEvt.notes, confirmation_statut: editingEvt.confirmation_statut, responsable_coach_id: editingEvt.responsable_coach_id || null, responsable_equipement_id: editingEvt.responsable_equipement_id || null };
+    var ancienStatut = (data.find(function(e) { return e.id === editingEvt.id; }) || {}).statut;
+    var devientTermine = editingEvt.statut === "Termine" && ancienStatut !== "Termine";
+
     sbUpdate("evenements", editingEvt.id, payload)
     .then(function() {
       return fetch(SUPABASE_URL + "/rest/v1/evenement_coaches?evenement_id=eq." + editingEvt.id, {
@@ -2439,6 +2442,14 @@ function Evenements() {
       return liaisons.length ? sbInsertMany("evenement_coaches", liaisons) : Promise.resolve([]);
     })
     .then(function() {
+      // Si l'événement vient de passer en Termine, incrémenter sessions_completees de chaque coach assigné
+      if (devientTermine && editEvtCoaches.length > 0) {
+        editEvtCoaches.forEach(function(cid) {
+          var coach = coaches.find(function(c) { return c.id === cid; });
+          var newCount = (Number(coach ? coach.sessions_completees : 0) || 0) + 1;
+          sbUpdate("coaches", cid, { sessions_completees: newCount });
+        });
+      }
       setData(data.map(function(e) { return e.id === editingEvt.id ? Object.assign({}, e, payload) : e; }));
       var newCmap = Object.assign({}, evtCoachMap);
       newCmap[editingEvt.id] = editEvtCoaches;
@@ -2602,27 +2613,30 @@ function Evenements() {
 
       {/* LISTE VIEW */}
       {view === "liste" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {data.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : data.map(function(e) {
-            var parts = getPartenairesForEvt(e.id);
-            var evtCoachIds = (evtCoachMap[e.id] || []);
-            var evtCoaches = coaches.filter(function(c) {
-              return evtCoachIds.indexOf(c.id) !== -1;
-            });
-            var isOpen = detailEvt === e.id;
-            var color = STATUT_EVT_COLOR[e.statut] || "#888";
-            return (
-              <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
-                <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12 }}>
-                  <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
-                    <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
-                      <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
-                    {e.confirmation_statut && <span style={{ fontSize: 11, background: e.confirmation_statut === "Confirme" ? "#1D9E7522" : "#BA751722", color: e.confirmation_statut === "Confirme" ? "#1D9E75" : "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{e.confirmation_statut === "Confirme" ? "✅ Confirmé" : "⏳ En attente"}</span>}
-                    </div>
-                    {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
-                    <Badge s={e.statut} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {data.length === 0 ? <Empty msg="Aucun événement — cliquez + Ajouter" /> : (function() {
+            var today = new Date().toISOString().split("T")[0];
+            var aVenir = data.filter(function(e) { return !e.date_debut || e.date_debut.split("T")[0] >= today; });
+            var passes = data.filter(function(e) { return e.date_debut && e.date_debut.split("T")[0] < today; });
+
+            function renderEvt(e) {
+              var parts = getPartenairesForEvt(e.id);
+              var evtCoachIds = (evtCoachMap[e.id] || []);
+              var evtCoaches = coaches.filter(function(c) { return evtCoachIds.indexOf(c.id) !== -1; });
+              var isOpen = detailEvt === e.id;
+              var color = STATUT_EVT_COLOR[e.statut] || "#888";
+              return (
+                <div key={e.id} style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+                  <div style={{ display: "flex", alignItems: "center", padding: "14px 16px", gap: 12 }}>
+                    <div onClick={function() { setDetailEvt(isOpen ? null : e.id); }} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, cursor: "pointer" }}>
+                      <div style={{ width: 4, height: 40, borderRadius: 4, background: color, flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a" }}>{e.titre}</div>
+                        <div style={{ fontSize: 12, color: "#999", marginTop: 2 }}>{e.type} · {e.date_debut ? e.date_debut.split("T")[0] : "—"}{e.lieu ? " · " + e.lieu : ""}</div>
+                        {e.confirmation_statut && <span style={{ fontSize: 11, background: e.confirmation_statut === "Confirme" ? "#1D9E7522" : "#BA751722", color: e.confirmation_statut === "Confirme" ? "#1D9E75" : "#BA7517", borderRadius: 12, padding: "2px 8px", fontWeight: 600 }}>{e.confirmation_statut === "Confirme" ? "✅ Confirmé" : "⏳ En attente"}</span>}
+                      </div>
+                      {e.nombre_enfants_presents > 0 && <span style={{ fontSize: 13, color: "#1D9E75", fontWeight: 500 }}>{e.nombre_enfants_presents} enfants</span>}
+                      <Badge s={e.statut} />
                   </div>
                   <button onClick={function(ev) {
   ev.stopPropagation();
@@ -2676,11 +2690,38 @@ function Evenements() {
                 )}
               </div>
             );
-          })}
+          }
+
+            return (
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {/* À venir */}
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                    <div style={{ height: 2, flex: 1, background: "#1D9E75" }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#1D9E75", whiteSpace: "nowrap" }}>📅 À venir ({aVenir.length})</span>
+                    <div style={{ height: 2, flex: 1, background: "#1D9E75" }} />
+                  </div>
+                  {aVenir.length === 0
+                    ? <div style={{ fontSize: 13, color: "#aaa", textAlign: "center", padding: "12px 0" }}>Aucun événement à venir</div>
+                    : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{aVenir.map(renderEvt)}</div>
+                  }
+                </div>
+                {/* Passés */}
+                {passes.length > 0 && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                      <div style={{ height: 2, flex: 1, background: "#ccc" }} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#888", whiteSpace: "nowrap" }}>🕐 Passés ({passes.length})</span>
+                      <div style={{ height: 2, flex: 1, background: "#ccc" }} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10, opacity: 0.75 }}>{passes.slice().reverse().map(renderEvt)}</div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
-
-      {/* CALENDRIER VIEW */}
       {view === "calendrier" && (function() {
         var cal = getDaysInMonth(currentMonth);
         var blanks = Array(cal.firstDay).fill(null);
