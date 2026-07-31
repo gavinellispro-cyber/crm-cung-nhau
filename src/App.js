@@ -3074,10 +3074,19 @@ function Coaches() {
   var miniSel = { padding: "6px 8px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 13, background: "#fff" };
 
   var now = new Date();
-  var exportMoisState = useState(now.getMonth()); var exportMois = exportMoisState[0]; var setExportMois = exportMoisState[1];
+  var exportMoisState = useState([now.getMonth()]); var exportMois = exportMoisState[0]; var setExportMois = exportMoisState[1];
   var exportAnneeState = useState(now.getFullYear()); var exportAnnee = exportAnneeState[0]; var setExportAnnee = exportAnneeState[1];
   var exportingState = useState(false); var exporting = exportingState[0]; var setExporting = exportingState[1];
   var exportPanelState = useState(false); var exportPanel = exportPanelState[0]; var setExportPanel = exportPanelState[1];
+
+  function toggleMois(m) {
+    if (exportMois.indexOf(m) >= 0) {
+      if (exportMois.length === 1) return; // garder au moins 1
+      setExportMois(exportMois.filter(function(x) { return x !== m; }));
+    } else {
+      setExportMois(exportMois.concat(m).sort(function(a,b){return a-b;}));
+    }
+  }
 
   var MOIS_NOMS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
@@ -3095,13 +3104,22 @@ function Coaches() {
         });
       }
       var XLSX = window.XLSX;
-      // Charger tous les événements terminés du mois sélectionné
-      var debut = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-01";
-      var fin = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-31";
-      var evts = await sbFetch("evenements", { select: "*", filter: "statut=eq.Termine&date_debut=gte." + debut + "T00:00:00&date_debut=lte." + fin + "T23:59:59", order: "date_debut.asc" });
+      // Charger tous les événements terminés des mois sélectionnés
+      var moisTries = exportMois.slice().sort(function(a,b){return a-b;});
+      var debut = exportAnnee + "-" + String(moisTries[0] + 1).padStart(2, "0") + "-01";
+      var finMois = moisTries[moisTries.length - 1];
+      var finJour = new Date(exportAnnee, finMois + 1, 0).getDate();
+      var fin = exportAnnee + "-" + String(finMois + 1).padStart(2, "0") + "-" + finJour;
+      var allEvts = await sbFetch("evenements", { select: "*", filter: "statut=eq.Termine&date_debut=gte." + debut + "T00:00:00&date_debut=lte." + fin + "T23:59:59", order: "date_debut.asc" });
+      // Filtrer pour ne garder que les mois sélectionnés
+      var evts = allEvts.filter(function(e) {
+        if (!e.date_debut) return false;
+        var m = new Date(e.date_debut).getMonth();
+        return exportMois.indexOf(m) >= 0;
+      });
       var ecLinks = await sbFetch("evenement_coaches", { select: "coach_id,evenement_id" });
       var wb = XLSX.utils.book_new();
-      var moisLabel = MOIS_NOMS[exportMois] + " " + exportAnnee;
+      var moisLabel = exportMois.map(function(m) { return MOIS_NOMS[m]; }).join(", ") + " " + exportAnnee;
       var totalEvts = evts.length;
 
       // ── Feuille 1 : Récapitulatif ──
@@ -3123,7 +3141,7 @@ function Coaches() {
 
       var ws1 = XLSX.utils.aoa_to_sheet(recap);
       ws1["!cols"] = [{ wch: 24 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 40 }];
-      XLSX.utils.book_append_sheet(wb, ws1, "Récapitulatif " + MOIS_NOMS[exportMois]);
+      XLSX.utils.book_append_sheet(wb, ws1, "Récap " + exportMois.map(function(m){return MOIS_NOMS[m].substring(0,3);}).join("-"));
 
       // ── Feuille 2 : Matrice participation ──
       var matHeaders = ["Coach"].concat(evts.map(function(e) { return e.titre + "\n" + (e.date_debut ? e.date_debut.split("T")[0] : ""); })).concat(["Sessions réalisées", "Taux participation"]);
@@ -3167,7 +3185,7 @@ function Coaches() {
       XLSX.utils.book_append_sheet(wb, ws3, "Détail par coach");
 
       // Téléchargement
-      XLSX.writeFile(wb, "rapport_coaches_" + MOIS_NOMS[exportMois].toLowerCase() + "_" + exportAnnee + ".xlsx");
+      XLSX.writeFile(wb, "rapport_coaches_" + exportMois.map(function(m){return MOIS_NOMS[m].toLowerCase().substring(0,3);}).join("-") + "_" + exportAnnee + ".xlsx");
     } catch(e) { alert("Erreur export : " + e.message); }
     setExporting(false);
     setExportPanel(false);
@@ -3210,18 +3228,34 @@ function Coaches() {
 
       {/* Panneau export Excel */}
       {exportPanel && (
-        <div style={{ background: "#fff", border: "1px solid #1D9E75", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>📊 Rapport mensuel coaches</span>
-          <select value={exportMois} onChange={function(e) { setExportMois(Number(e.target.value)); }} style={miniSel}>
-            {MOIS_NOMS.map(function(m, i) { return <option key={i} value={i}>{m}</option>; })}
-          </select>
-          <select value={exportAnnee} onChange={function(e) { setExportAnnee(Number(e.target.value)); }} style={miniSel}>
-            {[2024, 2025, 2026, 2027].map(function(y) { return <option key={y} value={y}>{y}</option>; })}
-          </select>
-          <button onClick={handleExportExcel} disabled={exporting} style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: exporting ? "#aaa" : "#1D9E75", color: "#fff", cursor: exporting ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600 }}>
-            {exporting ? "⏳ Génération..." : "⬇ Télécharger .xlsx"}
-          </button>
-          <span style={{ fontSize: 12, color: "#888" }}>3 feuilles : récapitulatif · matrice · détail par coach</span>
+        <div style={{ background: "#fff", border: "1px solid #1D9E75", borderRadius: 12, padding: "16px 20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#1a1a1a" }}>📊 Rapport mensuel coaches</span>
+            <select value={exportAnnee} onChange={function(e) { setExportAnnee(Number(e.target.value)); }} style={miniSel}>
+              {[2024, 2025, 2026, 2027].map(function(y) { return <option key={y} value={y}>{y}</option>; })}
+            </select>
+          </div>
+          {/* Grille mois */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 14 }}>
+            {MOIS_NOMS.map(function(m, i) {
+              var selected = exportMois.indexOf(i) >= 0;
+              return (
+                <button key={i} onClick={function() { toggleMois(i); }} style={{ padding: "6px 4px", borderRadius: 8, border: "2px solid " + (selected ? "#1D9E75" : "#e0e0e0"), background: selected ? "#1D9E7518" : "#fff", color: selected ? "#1D9E75" : "#888", cursor: "pointer", fontSize: 11, fontWeight: selected ? 700 : 400, textAlign: "center" }}>
+                  {m.substring(0, 3)}
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 12, color: "#888" }}>
+              {exportMois.length} mois sélectionné{exportMois.length > 1 ? "s" : ""} : <strong style={{ color: "#1D9E75" }}>{exportMois.map(function(m){return MOIS_NOMS[m];}).join(", ")}</strong>
+            </span>
+            <button onClick={function() { setExportMois([0,1,2,3,4,5,6,7,8,9,10,11]); }} style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid #e0e0e0", background: "#f4f4f4", cursor: "pointer", fontSize: 11, color: "#555" }}>Tout sélectionner</button>
+            <button onClick={handleExportExcel} disabled={exporting} style={{ marginLeft: "auto", padding: "8px 18px", borderRadius: 8, border: "none", background: exporting ? "#aaa" : "#1D9E75", color: "#fff", cursor: exporting ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600 }}>
+              {exporting ? "⏳ Génération..." : "⬇ Télécharger .xlsx"}
+            </button>
+          </div>
+          <div style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>3 feuilles : récapitulatif · matrice de participation · détail par coach</div>
         </div>
       )}
 
