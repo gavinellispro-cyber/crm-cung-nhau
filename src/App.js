@@ -3084,13 +3084,22 @@ function Coaches() {
   async function handleExportExcel() {
     setExporting(true);
     try {
+      // Charger SheetJS via script tag si pas encore chargé
+      if (!window.XLSX) {
+        await new Promise(function(resolve, reject) {
+          var s = document.createElement("script");
+          s.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+      var XLSX = window.XLSX;
       // Charger tous les événements terminés du mois sélectionné
       var debut = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-01";
       var fin = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-31";
       var evts = await sbFetch("evenements", { select: "*", filter: "statut=eq.Termine&date_debut=gte." + debut + "T00:00:00&date_debut=lte." + fin + "T23:59:59", order: "date_debut.asc" });
       var ecLinks = await sbFetch("evenement_coaches", { select: "coach_id,evenement_id" });
-
-      var XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs");
       var wb = XLSX.utils.book_new();
       var moisLabel = MOIS_NOMS[exportMois] + " " + exportAnnee;
       var totalEvts = evts.length;
