@@ -3073,7 +3073,96 @@ function Coaches() {
 
   var miniSel = { padding: "6px 8px", borderRadius: 8, border: "1px solid #d0d0d0", fontSize: 13, background: "#fff" };
 
-  if (loading) return <Spinner />;
+  var now = new Date();
+  var exportMoisState = useState(now.getMonth()); var exportMois = exportMoisState[0]; var setExportMois = exportMoisState[1];
+  var exportAnneeState = useState(now.getFullYear()); var exportAnnee = exportAnneeState[0]; var setExportAnnee = exportAnneeState[1];
+  var exportingState = useState(false); var exporting = exportingState[0]; var setExporting = exportingState[1];
+  var exportPanelState = useState(false); var exportPanel = exportPanelState[0]; var setExportPanel = exportPanelState[1];
+
+  var MOIS_NOMS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+  async function handleExportExcel() {
+    setExporting(true);
+    try {
+      // Charger tous les événements terminés du mois sélectionné
+      var debut = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-01";
+      var fin = exportAnnee + "-" + String(exportMois + 1).padStart(2, "0") + "-31";
+      var evts = await sbFetch("evenements", { select: "*", filter: "statut=eq.Termine&date_debut=gte." + debut + "T00:00:00&date_debut=lte." + fin + "T23:59:59", order: "date_debut.asc" });
+      var ecLinks = await sbFetch("evenement_coaches", { select: "coach_id,evenement_id" });
+
+      var XLSX = await import("https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs");
+      var wb = XLSX.utils.book_new();
+      var moisLabel = MOIS_NOMS[exportMois] + " " + exportAnnee;
+      var totalEvts = evts.length;
+
+      // ── Feuille 1 : Récapitulatif ──
+      var recap = [["RAPPORT COACHES — " + moisLabel.toUpperCase()], [], ["Coach", "Pays", "Rôle", "Sessions réalisées", "Total événements mois", "Taux participation (%)", "Rang", "Événements participés"]];
+      var coachStats = data.map(function(c) {
+        var evtIds = (ecLinks.filter(function(l) { return l.coach_id === c.id; }).map(function(l) { return l.evenement_id; }));
+        var moisEvts = evts.filter(function(e) { return evtIds.indexOf(e.id) >= 0; });
+        var taux = totalEvts > 0 ? Math.round(moisEvts.length / totalEvts * 100) : 0;
+        return { coach: c, realises: moisEvts.length, taux: taux, evtNoms: moisEvts.map(function(e) { return e.titre; }).join(", ") };
+      }).sort(function(a, b) { return b.realises - a.realises; });
+
+      coachStats.forEach(function(s, i) {
+        var rang = i === 0 ? "🥇 #1" : i === 1 ? "🥈 #2" : i === 2 ? "🥉 #3" : "#" + (i + 1);
+        recap.push([s.coach.prenom + " " + s.coach.nom, s.coach.pays || "", s.coach.role || "", s.realises, totalEvts, s.taux + "%", rang, s.evtNoms]);
+      });
+      recap.push([]);
+      recap.push(["Total sessions ce mois", "", "", coachStats.reduce(function(s, x) { return s + x.realises; }, 0), "", "", "", ""]);
+      recap.push(["Rapport généré le", new Date().toLocaleDateString("fr-FR")]);
+
+      var ws1 = XLSX.utils.aoa_to_sheet(recap);
+      ws1["!cols"] = [{ wch: 24 }, { wch: 14 }, { wch: 16 }, { wch: 18 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 40 }];
+      XLSX.utils.book_append_sheet(wb, ws1, "Récapitulatif " + MOIS_NOMS[exportMois]);
+
+      // ── Feuille 2 : Matrice participation ──
+      var matHeaders = ["Coach"].concat(evts.map(function(e) { return e.titre + "\n" + (e.date_debut ? e.date_debut.split("T")[0] : ""); })).concat(["Sessions réalisées", "Taux participation"]);
+      var mat = [["MATRICE DE PARTICIPATION — " + moisLabel.toUpperCase()], [], matHeaders];
+      coachStats.forEach(function(s) {
+        var row = [s.coach.prenom + " " + s.coach.nom];
+        var evtIds = ecLinks.filter(function(l) { return l.coach_id === s.coach.id; }).map(function(l) { return l.evenement_id; });
+        evts.forEach(function(e) { row.push(evtIds.indexOf(e.id) >= 0 ? "✓" : "—"); });
+        row.push(s.realises);
+        row.push(s.taux + "%");
+        mat.push(row);
+      });
+      // Totaux par événement
+      var totRow = ["Total présences"];
+      evts.forEach(function(e) {
+        totRow.push(ecLinks.filter(function(l) { return l.evenement_id === e.id && data.some(function(c) { return c.id === l.coach_id; }); }).length);
+      });
+      totRow.push(""); totRow.push("");
+      mat.push([]); mat.push(totRow);
+
+      var ws2 = XLSX.utils.aoa_to_sheet(mat);
+      ws2["!cols"] = [{ wch: 24 }].concat(evts.map(function() { return { wch: 20 }; })).concat([{ wch: 16 }, { wch: 16 }]);
+      XLSX.utils.book_append_sheet(wb, ws2, "Matrice participation");
+
+      // ── Feuille 3 : Détail par coach ──
+      var detail = [["DÉTAIL PAR COACH — " + moisLabel.toUpperCase()], [], ["Coach", "Pays", "Événement", "Date", "Lieu", "Enfants touchés", "Statut"]];
+      coachStats.forEach(function(s) {
+        var evtIds = ecLinks.filter(function(l) { return l.coach_id === s.coach.id; }).map(function(l) { return l.evenement_id; });
+        var moisEvts = evts.filter(function(e) { return evtIds.indexOf(e.id) >= 0; });
+        if (moisEvts.length === 0) {
+          detail.push([s.coach.prenom + " " + s.coach.nom, s.coach.pays || "", "—", "", "", "", ""]);
+        } else {
+          moisEvts.forEach(function(e, i) {
+            detail.push([i === 0 ? s.coach.prenom + " " + s.coach.nom : "", i === 0 ? s.coach.pays || "" : "", e.titre, e.date_debut ? e.date_debut.split("T")[0] : "", e.lieu || "", e.nombre_enfants_presents || 0, e.statut]);
+          });
+        }
+      });
+
+      var ws3 = XLSX.utils.aoa_to_sheet(detail);
+      ws3["!cols"] = [{ wch: 24 }, { wch: 12 }, { wch: 28 }, { wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, ws3, "Détail par coach");
+
+      // Téléchargement
+      XLSX.writeFile(wb, "rapport_coaches_" + MOIS_NOMS[exportMois].toLowerCase() + "_" + exportAnnee + ".xlsx");
+    } catch(e) { alert("Erreur export : " + e.message); }
+    setExporting(false);
+    setExportPanel(false);
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -3104,8 +3193,28 @@ function Coaches() {
           <option value="statut">Tri : statut</option>
         </select>
         {filtresActifs && <button onClick={function() { setSearch(""); setFStatut("Tous"); setFRole("Tous"); setFSport("Tous"); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #d0d0d0", background: "#fff", cursor: "pointer", fontSize: 13, color: "#888" }}>✕ Réinitialiser</button>}
-        <button onClick={function() { setModal(true); }} style={Object.assign({}, btnA, { marginLeft: "auto" })}>+ Ajouter</button>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+          <button onClick={function() { setExportPanel(!exportPanel); }} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #1D9E75", background: exportPanel ? "#1D9E75" : "#fff", color: exportPanel ? "#fff" : "#1D9E75", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>📊 Export Excel</button>
+          <button onClick={function() { setModal(true); }} style={btnA}>+ Ajouter</button>
+        </div>
       </div>
+
+      {/* Panneau export Excel */}
+      {exportPanel && (
+        <div style={{ background: "#fff", border: "1px solid #1D9E75", borderRadius: 12, padding: "16px 20px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "#1a1a1a" }}>📊 Rapport mensuel coaches</span>
+          <select value={exportMois} onChange={function(e) { setExportMois(Number(e.target.value)); }} style={miniSel}>
+            {MOIS_NOMS.map(function(m, i) { return <option key={i} value={i}>{m}</option>; })}
+          </select>
+          <select value={exportAnnee} onChange={function(e) { setExportAnnee(Number(e.target.value)); }} style={miniSel}>
+            {[2024, 2025, 2026, 2027].map(function(y) { return <option key={y} value={y}>{y}</option>; })}
+          </select>
+          <button onClick={handleExportExcel} disabled={exporting} style={{ padding: "7px 16px", borderRadius: 8, border: "none", background: exporting ? "#aaa" : "#1D9E75", color: "#fff", cursor: exporting ? "not-allowed" : "pointer", fontSize: 13, fontWeight: 600 }}>
+            {exporting ? "⏳ Génération..." : "⬇ Télécharger .xlsx"}
+          </button>
+          <span style={{ fontSize: 12, color: "#888" }}>3 feuilles : récapitulatif · matrice · détail par coach</span>
+        </div>
+      )}
 
       <div style={{ fontSize: 13, color: "#888" }}>
         {filtered.length === data.length ? (data.length + " coach" + (data.length > 1 ? "es" : "")) : (filtered.length + " / " + data.length + " coaches")}
