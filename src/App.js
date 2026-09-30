@@ -236,7 +236,7 @@ function Dashboard(props) {
       sbFetch("revenus", { select: "*" }),
       sbFetch("coaches", { select: "*", filter: "statut=eq.Actif" }),
       sbFetch("partenaires", { select: "*" }),
-      sbFetch("taches", { select: "*", filter: "statut=not.in.(Termine,Confirme)", order: "date_echeance.asc" }),
+      sbFetch("taches", { select: "*", filter: "statut=neq.Termine", order: "date_echeance.asc" }),
       sbFetch("actions_partenaires", { select: "*", filter: "statut=eq.En+attente", order: "date_prevue.asc" }),
     ]).then(function(r) {
       // Split taches: general (no evenement_id) vs event tasks
@@ -251,21 +251,18 @@ function Dashboard(props) {
   var dashToggleTache = useState([]); var toggledTaches = dashToggleTache[0]; var setToggledTaches = dashToggleTache[1];
 
   function handleDashToggle(t) {
-    sbUpdate("taches", t.id, { statut: "Termine" }).then(function() {
-      setData(Object.assign({}, data, { taches: data.taches.filter(function(x) { return x.id !== t.id; }) }));
-    });
+    setData(function(prev) { return Object.assign({}, prev, { taches: prev.taches.filter(function(x) { return x.id !== t.id; }) }); });
+    sbUpdate("taches", t.id, { statut: "Termine" });
   }
 
   function handleDashToggleAction(a) {
-    sbUpdate("actions_partenaires", a.id, { statut: "Confirme" }).then(function() {
-      setData(Object.assign({}, data, { actions: (data.actions || []).filter(function(x) { return x.id !== a.id; }) }));
-    });
+    setData(function(prev) { return Object.assign({}, prev, { actions: (prev.actions || []).filter(function(x) { return x.id !== a.id; }) }); });
+    sbUpdate("actions_partenaires", a.id, { statut: "Confirme" });
   }
 
   function handleDashToggleEvtTask(t) {
-    sbUpdate("taches", t.id, { statut: "Confirme" }).then(function() {
-      setData(Object.assign({}, data, { tachesEvt: (data.tachesEvt || []).filter(function(x) { return x.id !== t.id; }) }));
-    });
+    setData(function(prev) { return Object.assign({}, prev, { tachesEvt: (prev.tachesEvt || []).filter(function(x) { return x.id !== t.id; }) }); });
+    sbUpdate("taches", t.id, { statut: "Confirme" });
   }
 
   // Modal nouvelle tâche (géré dans le Dashboard)
