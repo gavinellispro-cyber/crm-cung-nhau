@@ -236,7 +236,7 @@ function Dashboard(props) {
       sbFetch("revenus", { select: "*" }),
       sbFetch("coaches", { select: "*", filter: "statut=eq.Actif" }),
       sbFetch("partenaires", { select: "*" }),
-      sbFetch("taches", { select: "*", filter: "statut=neq.Confirme", order: "date_echeance.asc" }),
+      sbFetch("taches", { select: "*", filter: "statut=not.in.(Termine,Confirme)", order: "date_echeance.asc" }),
       sbFetch("actions_partenaires", { select: "*", filter: "statut=eq.En+attente", order: "date_prevue.asc" }),
     ]).then(function(r) {
       // Split taches: general (no evenement_id) vs event tasks
@@ -3560,7 +3560,9 @@ function TachesWidget(props) {
     return { id: "evttask_" + t.id, _isEvtTask: true, _originalId: t.id, titre: t.titre, description: evt ? ("📅 " + evt.titre) : "", priorite: t.priorite || "Moyenne", date_echeance: t.date_echeance || (evt && evt.date_debut ? evt.date_debut.split("T")[0] : null), _evtNom: evt ? evt.titre : "", statut: t.statut };
   });
 
-  var allItems = taches.concat(actionsTasks).concat(evtTasks);
+  var allItems = taches.filter(function(t) { return t.statut !== "Termine" && t.statut !== "Confirme"; })
+    .concat(actionsTasks)
+    .concat(evtTasks.filter(function(t) { return t.statut !== "Termine" && t.statut !== "Confirme"; }));
   var today = new Date().toISOString().split("T")[0];
 
   function sortItems(list) {
