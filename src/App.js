@@ -238,12 +238,12 @@ function Dashboard(props) {
       sbFetch("partenaires", { select: "*" }),
       sbFetch("taches", { select: "*", filter: "statut=neq.Termine", order: "date_echeance.asc" }),
       sbFetch("actions_partenaires", { select: "*", filter: "statut=eq.En+attente", order: "date_prevue.asc" }),
+      sbFetch("emails", { select: "id,de,a,sujet,date_reception,lu,type,importance,partenaire_id", filter: "type=eq.recu", order: "date_reception.desc" }),
     ]).then(function(r) {
-      // Split taches: general (no evenement_id) vs event tasks
       var allTaches = r[5];
       var tachesGenerales = allTaches.filter(function(t) { return !t.evenement_id; });
       var tachesEvenements = allTaches.filter(function(t) { return !!t.evenement_id; });
-      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: tachesGenerales, tachesEvt: tachesEvenements, actions: r[6] });
+      setData({ evenements: r[0], depenses: r[1], revenus: r[2], coaches: r[3], partenaires: r[4], taches: tachesGenerales, tachesEvt: tachesEvenements, actions: r[6], emails: r[7] });
       setLoading(false);
     }).catch(function() { setLoading(false); });
   }, []);
@@ -327,6 +327,56 @@ function Dashboard(props) {
         <button onClick={function() { setDashView("taches"); }} style={{ padding: "7px 20px", borderRadius: 7, border: "none", background: dashView === "taches" ? "#C8102E" : "transparent", color: dashView === "taches" ? "#fff" : "rgba(255,255,255,0.6)", cursor: "pointer", fontSize: 14, fontWeight: dashView === "taches" ? 600 : 400 }}>📋 Tâches{totalPending > 0 ? " (" + totalPending + ")" : ""}</button>
       </div>
       <div style={{ display: dashView === "taches" ? "block" : "none" }}>
+        {/* ── EMAILS À TRAITER ── */}
+        {(function() {
+          var allEmails = data.emails || [];
+          var now48 = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+          var PROMO_KW = ["newsletter","noreply","no-reply","unsubscribe","promotion","marketing","promo","offre","deal","sale","discount","publicite","donotreply","do-not-reply","notification","automatic","automatique"];
+          function isPromo(e) { var f = (e.de||"").toLowerCase(); var s = (e.sujet||"").toLowerCase(); return PROMO_KW.some(function(k){return f.indexOf(k)>=0||s.indexOf(k)>=0;}); }
+          var emailsATraiter = allEmails.filter(function(e) {
+            if (isPromo(e)) return false;
+            return !e.lu || (e.date_reception && e.date_reception < now48) || e.importance === "urgent" || e.importance === "important";
+          });
+          if (emailsATraiter.length === 0) return null;
+          return (
+            <div>
+              <SectionTitle>📧 Emails à traiter ({emailsATraiter.length})</SectionTitle>
+              <div style={{ background: "#fff", border: "1px solid #e0e0e0", borderRadius: 12, overflow: "hidden" }}>
+                {emailsATraiter.slice(0, 8).map(function(email, idx) {
+                  var dateStr = email.date_reception ? new Date(email.date_reception).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+                  var fromName = email.de ? (email.de.split("<")[0].trim() || email.de) : "—";
+                  var isUrgent = email.importance === "urgent";
+                  var isImportant = email.importance === "important";
+                  var isNonLu = !email.lu;
+                  var isSansRep = email.date_reception && email.date_reception < now48 && email.lu;
+                  return (
+                    <div key={email.id} onClick={function() { setTab("emails"); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 16px", borderBottom: idx < Math.min(emailsATraiter.length, 8) - 1 ? "1px solid #f4f4f4" : "none", cursor: "pointer", background: isNonLu ? "#fff8f8" : "#fff" }}
+                      onMouseEnter={function(e){e.currentTarget.style.background="#f9f9f9";}} onMouseLeave={function(e){e.currentTarget.style.background=isNonLu?"#fff8f8":"#fff";}}>
+                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: isUrgent ? "#C8102E" : isImportant ? "#BA7517" : isNonLu ? "#185FA5" : "#ccc", flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: isNonLu ? 700 : 500, color: "#1a1a1a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180 }}>{fromName}</span>
+                          {isUrgent && <span style={{ fontSize: 10, background: "#C8102E", color: "#fff", borderRadius: 10, padding: "1px 6px", fontWeight: 700, flexShrink: 0 }}>🔴 Urgent</span>}
+                          {isImportant && !isUrgent && <span style={{ fontSize: 10, background: "#BA7517", color: "#fff", borderRadius: 10, padding: "1px 6px", fontWeight: 700, flexShrink: 0 }}>🟡 Important</span>}
+                          {isNonLu && !isUrgent && !isImportant && <span style={{ fontSize: 10, background: "#185FA511", color: "#185FA5", border: "1px solid #185FA533", borderRadius: 10, padding: "1px 6px", fontWeight: 700, flexShrink: 0 }}>Non lu</span>}
+                          {isSansRep && <span style={{ fontSize: 10, background: "#f4f4f4", color: "#888", borderRadius: 10, padding: "1px 6px", flexShrink: 0 }}>+48h sans réponse</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#aaa", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{email.sujet || "(sans objet)"}</div>
+                      </div>
+                      <div style={{ fontSize: 11, color: "#bbb", flexShrink: 0 }}>{dateStr}</div>
+                    </div>
+                  );
+                })}
+                {emailsATraiter.length > 8 && (
+                  <div onClick={function() { setTab("emails"); }} style={{ padding: "8px 16px", textAlign: "center", fontSize: 12, color: "#C8102E", cursor: "pointer", fontWeight: 600, background: "#f9f9f9" }}>
+                    + {emailsATraiter.length - 8} autres → Voir tous les emails
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
         <TachesWidget taches={data.taches || []} partenaires={data.partenaires || []} actions={data.actions || []} tachesEvt={data.tachesEvt || []} evenements={data.evenements || []} onAdd={function() { setTacheModal(true); }} onToggle={handleDashToggle} onToggleAction={handleDashToggleAction} onToggleEvtTask={handleDashToggleEvtTask} setTab={setTab} onOpenFiche={function(id) { setDashFicheId(id); }} onOpenEvt={function(id) { setDashEvtId(id); }} />
       </div>
       <div style={{ display: ["general","evtMois","evtAnnee","part_ONG","part_Shelter","part_Ecole","part_Sponsor","coaches","retard","actions"].indexOf(dashView) >= 0 ? "flex" : "none", flexDirection: "column", gap: 20 }}>
